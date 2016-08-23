@@ -1,0 +1,4790 @@
+#LyX 2.0 created this file. For more info see http://www.lyx.org/
+\lyxformat 413
+\begin_document
+\begin_header
+\textclass report
+\use_default_options true
+\master ../main.lyx
+\maintain_unincluded_children false
+\language english
+\language_package default
+\inputencoding auto
+\fontencoding global
+\font_roman default
+\font_sans default
+\font_typewriter default
+\font_default_family default
+\use_non_tex_fonts false
+\font_sc false
+\font_osf false
+\font_sf_scale 100
+\font_tt_scale 100
+
+\graphics default
+\default_output_format default
+\output_sync 0
+\bibtex_command default
+\index_command default
+\paperfontsize default
+\spacing single
+\use_hyperref false
+\papersize default
+\use_geometry false
+\use_amsmath 1
+\use_esint 1
+\use_mhchem 1
+\use_mathdots 1
+\cite_engine basic
+\use_bibtopic false
+\use_indices false
+\paperorientation portrait
+\suppress_date false
+\use_refstyle 1
+\index Index
+\shortcut idx
+\color #008000
+\end_index
+\secnumdepth 3
+\tocdepth 3
+\paragraph_separation indent
+\paragraph_indentation default
+\quotes_language english
+\papercolumns 1
+\papersides 1
+\paperpagestyle default
+\tracking_changes false
+\output_changes false
+\html_math_output 0
+\html_css_as_file 0
+\html_be_strict false
+\end_header
+
+\begin_body
+
+\begin_layout Standard
+\begin_inset Newpage cleardoublepage
+\end_inset
+
+
+\end_layout
+
+\begin_layout Chapter
+Feature Segmentation for Object Recognition
+\end_layout
+
+\begin_layout Section
+Introduction
+\end_layout
+
+\begin_layout Standard
+In the previous chapter we presented a method for matching SIFT features
+ from a learned object database to scene image features.
+ This allows a robot to recognise and localise an object in a scene, which
+ is vital for many robotics applications, as it allows the robot to effectively
+ track, grasp, and then manipulate the object.
+ 
+\end_layout
+
+\begin_layout Standard
+There are some applications in which it is not possible to provide training
+ images of an object 
+\emph on
+a priori
+\emph default
+.
+ In the case of an autonomous robot deployed to a new environment (for example
+ a household service robot), it is impossible to predict every object that
+ the robot may need to interact with and hence recognise.
+ A solution to this problem is for the robot to be able to autonomously
+ acquire training data of an object in its environment with no human interventio
+n.
+ 
+\end_layout
+
+\begin_layout Standard
+In this chapter we present a system for a robot to determine training data
+ for a previously unseen object in the presence of clutter, noise and background
+ motion.
+ Our vision system for object recognition and localisation is based on SIFT
+ features.
+ As a result, the specific problem that we solve is segmenting the SIFT
+ features of an object from the background, in a complex and cluttered environme
+nt (an example of this problem is shown in Figure 
+\begin_inset CommandInset ref
+LatexCommand ref
+reference "fig:cluttered-object-grasp"
+
+\end_inset
+
+).
+ These features then form snapshots in an object feature database, that
+ can be used for recognition and localisation of the object in a scene at
+ a later time.
+\end_layout
+
+\begin_layout Standard
+Our approach to this problem is focused on obtaining as much information
+ as possible about individual image features, which is then used to determine
+ whether a feature belongs to the object, to the robot arm, or to the background.
+ This is done by having the robot grasp the object and performs a series
+ of moves, while stereo vision and feature tracking are used to gather trajector
+y data for each feature over multiple frames.
+ By using robot induced object motion and tracking stable image features
+ over many frames, we can effectively separate object and background features
+ in a dynamic, highly cluttered environment.
+ These features can then be used for building an all-aspect object appearance
+ model (discussed in Chapter 5), allowing recognition, localisation, and
+ effective manipulation of the object by the robot.
+\end_layout
+
+\begin_layout Standard
+The outline of this chapter is as follows: 
+\end_layout
+
+\begin_layout Enumerate
+a brief overview of related approaches and their corresponding weaknesses
+ (Section 
+\begin_inset CommandInset ref
+LatexCommand ref
+reference "sec:Existing-Approaches"
+
+\end_inset
+
+);
+\end_layout
+
+\begin_layout Enumerate
+a detailed description of the feature segmentation method (Section 
+\begin_inset CommandInset ref
+LatexCommand ref
+reference "sec:Feature-Segmentation-Algorithm"
+
+\end_inset
+
+);
+\end_layout
+
+\begin_layout Enumerate
+experimental results demonstrating the effectiveness of the presented method
+ (Section 
+\begin_inset CommandInset ref
+LatexCommand ref
+reference "sec:Evaluation"
+
+\end_inset
+
+);
+\end_layout
+
+\begin_layout Enumerate
+a discussion of the results and of the presented algorithm (Section 
+\begin_inset CommandInset ref
+LatexCommand ref
+reference "sec:Discussion-2"
+
+\end_inset
+
+);
+\end_layout
+
+\begin_layout Enumerate
+an overview of avenues for future work (Section 
+\begin_inset CommandInset ref
+LatexCommand ref
+reference "sec:Future-Work-2"
+
+\end_inset
+
+).
+\end_layout
+
+\begin_layout Standard
+\begin_inset Float figure
+wide false
+sideways false
+status open
+
+\begin_layout Plain Layout
+\align center
+\begin_inset Graphics
+	filename images/desired_outcome.png
+	width 100text%
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Plain Layout
+\begin_inset Caption
+
+\begin_layout Plain Layout
+\begin_inset Argument
+status open
+
+\begin_layout Plain Layout
+Object SIFT feature segmentation.
+\end_layout
+
+\end_inset
+
+A robot arm gripping an object in a cluttered environment.
+ The purple arrows represent SIFT features.
+ Our goal is to separate out the object features, which can later be used
+ for recognising and localising the object in a scene.
+\begin_inset CommandInset label
+LatexCommand label
+name "fig:cluttered-object-grasp"
+
+\end_inset
+
+
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Section
+Current Methods
+\begin_inset CommandInset label
+LatexCommand label
+name "sec:Existing-Approaches"
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+The problem of learning a new object's appearance model can be viewed as
+ a segmentation problem.
+ Previous approaches to image and feature segmentation were presented in
+ detail in Chapter 2.
+ In this section we give a brief overview of the most relevant techniques.
+\end_layout
+
+\begin_layout Standard
+In a cluttered and complex environment and target object, static image analysis
+ may not be effective at separating the object image regions or features
+ from the background.
+ An alternate approach is to perform dynamic scene analysis.
+ Background subtraction 
+\begin_inset CommandInset citation
+LatexCommand cite
+key "4_background_subtraction_gaussian"
+
+\end_inset
+
+ 
+\begin_inset CommandInset citation
+LatexCommand cite
+key "4_background_subtraction_review"
+
+\end_inset
+
+ is one approach which can be used.
+ This involves having the robot observe the scene without the object in
+ place, and build an image model of the background.
+ The object is then placed in the scene, and to determine the object image
+ regions, the previously learned background model is subtracted from the
+ resulting image.
+ The areas of the image that correspond to the object will not match the
+ learned background model and will be labelled as foreground object regions.
+ This object image region can then be used to learn an appearance model,
+ such as object SIFT feature snapshots.
+\end_layout
+
+\begin_layout Standard
+Another approach is to use object motion to separate its image region from
+ the background.
+ One example 
+\begin_inset CommandInset citation
+LatexCommand cite
+key "4_first_contact"
+
+\end_inset
+
+ involves placing the object in a scene and nudging it with the robot gripper.
+ As the object moves as a result of the contact, there is an increased amount
+ of detected motion in the image stream.
+ This burst of motion can be used to segment the object image region from
+ the background using the min-cut algorithm 
+\begin_inset CommandInset citation
+LatexCommand cite
+key "min_cut"
+
+\end_inset
+
+ 
+\begin_inset CommandInset citation
+LatexCommand cite
+key "min_cut_algorithm"
+
+\end_inset
+
+.
+\end_layout
+
+\begin_layout Standard
+These methods have the advantage of being able to deal with a cluttered
+ background and a complex object.
+ However, in the presence of background motion, these algorithms may not
+ perform well.
+ This is because they only use instantaneous motion rather than long term
+ motion to determine which image regions correspond to the object.
+ To effectively cope with background motion, we propose that robot induced
+ object motion and long term tracking of feature trajectories is required
+ to build a model of each feature and use it to differentiate between background
+ motion and object motion, as well as separating out a cluttered background.
+\end_layout
+
+\begin_layout Section
+Feature Segmentation Algorithm
+\begin_inset CommandInset label
+LatexCommand label
+name "sec:Feature-Segmentation-Algorithm"
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Subsection
+Overview
+\end_layout
+
+\begin_layout Standard
+The purpose of our algorithm is to allow a robot to autonomously find object
+ image features in a dynamic unstructured environment.
+ These features can later be used for object recognition and localisation.
+ We do this by using the robot gripper to grasp and move the object through
+ a scene, recording this motion with a stereo camera, extracting long-term
+ (in the order of several seconds) feature trajectories from the resulting
+ video stream, and finally using these data to extract the object features.
+ The challenges we seek to addresses are:
+\end_layout
+
+\begin_layout Itemize
+separating object features from a cluttered background;
+\end_layout
+
+\begin_layout Itemize
+separating object and robot gripper features;
+\end_layout
+
+\begin_layout Itemize
+robustness to background motion;
+\end_layout
+
+\begin_layout Itemize
+robustness to changes in the visual appearance of the robot arm.
+\end_layout
+
+\begin_layout Standard
+The basis for our algorithm is to use motion to separate the features of
+ a target object from background features.
+ We track the motion in 3D world space rather than in 2D image space as
+ this provides more information to determine whether features belong to
+ the background or the object.
+ The use of SIFT features, that can be reliably correlated from frame to
+ frame, allows a feature to be tracked through multiple frames.
+ This enables long term tracking of features trajectories.
+ This in turn provides more information for segmentation as compared to
+ instantaneous motion methods 
+\begin_inset CommandInset citation
+LatexCommand cite
+key "4_first_contact"
+
+\end_inset
+
+.
+\end_layout
+
+\begin_layout Standard
+The basic outline of our approach is as follows: the robot grasps the object
+ and moves it through the scene in a linear motion (keeping the same aspect
+ of the object facing the camera), during this motion the robot records
+ a video stream from its stereo camera.
+ Grasping the object (before its appearance is learned) can be challenging.
+ In our case we had a human operator place the object in the robot's grasp,
+ but there are several other possible approaches that are discussed in the
+ future work section (Section 
+\begin_inset CommandInset ref
+LatexCommand ref
+reference "sec:Future-Work-2"
+
+\end_inset
+
+).
+\end_layout
+
+\begin_layout Standard
+For every frame, we extract SIFT features from the left and right camera
+ images and correlate them to form 3D SIFT features.
+ These features are tracked from frame to frame to form feature trajectories.
+ A single trajectory is a series of corresponding 3D SIFT features that
+ should be located on the same point on a surface in the scene.
+ Every few frames (we chose an interval of 5 frames) we take a snapshot,
+ and use the feature trajectories to determine which of the 3D SIFT features
+ belong to the grasped object and which belong to the background or robot
+ arm.
+ The object features from each snapshot are stored in an object feature
+ database.
+ 
+\end_layout
+
+\begin_layout Standard
+The stages of our algorithm are:
+\end_layout
+
+\begin_layout Enumerate
+extracting and correlating SIFT features from the stereo video stream
+\emph on
+ 
+\emph default
+(Section 
+\begin_inset CommandInset ref
+LatexCommand ref
+reference "sub:Stereo-Feature-Generation"
+
+\end_inset
+
+),
+\end_layout
+
+\begin_layout Enumerate
+tracking the trajectory of each feature during the motion (Section 
+\begin_inset CommandInset ref
+LatexCommand ref
+reference "sub:Feature-Tracking-and"
+
+\end_inset
+
+),
+\end_layout
+
+\begin_layout Enumerate
+periodically extract snapshots of object features when sufficient trajectory
+ data is available (Section 
+\begin_inset CommandInset ref
+LatexCommand ref
+reference "sub:Feature-Tracking-and"
+
+\end_inset
+
+),
+\end_layout
+
+\begin_layout Enumerate
+separate arm and object features (Section 
+\begin_inset CommandInset ref
+LatexCommand ref
+reference "sub:Separating-Arm-and"
+
+\end_inset
+
+),
+\end_layout
+
+\begin_layout Enumerate
+filter out background motion by ignoring features whose motion differs from
+ the trajectory of the arm (Section 
+\begin_inset CommandInset ref
+LatexCommand ref
+reference "sub:Filtering-Background-Motion"
+
+\end_inset
+
+),
+\end_layout
+
+\begin_layout Enumerate
+finally we improve the separation of arm and object features by comparing
+ the feature snapshots from different objects and remove matched features
+ (Section 
+\begin_inset CommandInset ref
+LatexCommand ref
+reference "sub:Refining-the-Segmentation"
+
+\end_inset
+
+).
+\end_layout
+
+\begin_layout Standard
+The platform we used for testing our algorithm consists of a Bumblebee2
+ (see Figure 
+\begin_inset CommandInset ref
+LatexCommand ref
+reference "fig:Robot-and-workspace"
+
+\end_inset
+
+) stereo camera (resolution of 
+\begin_inset Formula $512\times386$
+\end_inset
+
+ pixels at 
+\begin_inset Formula $15$
+\end_inset
+
+ frames per second is used) and a six degrees-of-freedom (DOF) industrial
+ arm with a two fingered gripper attached (see Figure 
+\begin_inset CommandInset ref
+LatexCommand ref
+reference "fig:Two-fingered-gripper"
+
+\end_inset
+
+).
+ The fingers consist of two servos per finger and silicone pads on the tips
+ to increase friction when grasping objects.
+ A workspace is accessible in front of the robot (see Figure 
+\begin_inset CommandInset ref
+LatexCommand ref
+reference "fig:Robot-and-workspace"
+
+\end_inset
+
+).
+ 
+\end_layout
+
+\begin_layout Standard
+We do not address the problem of the robot initially grasping the object.
+ In our experiments, the object is manually placed in the robot's gripper,
+ and the gripper is closed to apply sufficient pressure such that the object
+ does not slip.
+ The objects were chosen to have a shape and orientation suitable for grasping
+ by the robot's two-fingered gripper.
+ Future work could incorporate more sophisticated grasp planning 
+\begin_inset CommandInset citation
+LatexCommand cite
+key "5_grasp_planning"
+
+\end_inset
+
+ 
+\begin_inset CommandInset citation
+LatexCommand cite
+key "5_grasp_planning2"
+
+\end_inset
+
+, as well as a method for detecting previously unseen objects in the environment
+ and picking them up.
+ For example, if an object is located on a table, the robot could use the
+ height variation from the flat surface as a cue to indicate that there
+ may be an object that can be picked up.
+\end_layout
+
+\begin_layout Standard
+\begin_inset Float figure
+wide false
+sideways false
+status collapsed
+
+\begin_layout Plain Layout
+\align center
+\begin_inset Graphics
+	filename images/robot.png
+	width 100text%
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Plain Layout
+\begin_inset Caption
+
+\begin_layout Plain Layout
+\begin_inset Argument
+status open
+
+\begin_layout Plain Layout
+Robot platform and Bumblebee camera.
+\end_layout
+
+\end_inset
+
+Robot and workspace setup on the left, the Bumblee2 stereo camera on the
+ right.
+ The robot has a stereo camera on a pan-tilt unit and a 6-DOF arm with a
+ gripper attached.
+ 
+\size footnotesize
+Bumblebee2 schematics from: http://www.ptgrey.com/products/bumblebee2/bumblebee2_x
+b3_datasheet.pdf
+\size default
+
+\begin_inset CommandInset label
+LatexCommand label
+name "fig:Robot-and-workspace"
+
+\end_inset
+
+
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+\begin_inset Float figure
+wide false
+sideways false
+status collapsed
+
+\begin_layout Plain Layout
+\align center
+\begin_inset Graphics
+	filename ../5. Object Reconstruction/images/gripper.jpg
+	width 50text%
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Plain Layout
+\begin_inset Caption
+
+\begin_layout Plain Layout
+\begin_inset Argument
+status open
+
+\begin_layout Plain Layout
+Robot gripper.
+\end_layout
+
+\end_inset
+
+Two fingered gripper.
+ The gripping pads are constructed from silicone around flat metal plates.
+ Each finger consists of two servo-driven joints.
+\begin_inset CommandInset label
+LatexCommand label
+name "fig:Two-fingered-gripper"
+
+\end_inset
+
+
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Subsection
+Stereo Feature Generation
+\begin_inset CommandInset label
+LatexCommand label
+name "sub:Stereo-Feature-Generation"
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+Our overall approach is based on gathering as much data about each feature
+ as possible to determine if it belongs to the held object.
+ The first step is to determine the 3D world position of each feature.
+ At the time of this work, we determined that the most suitable sensor for
+ this was a stereo camera.
+ In later work (Chapters 5 and 6) we switched to using the new Kinect depth
+ camera, as it provided higher resolution depth information than we could
+ obtain from the stereo camera.
+ However, the techniques presented in this chapter are mostly independent
+ of the specific sensor used to determine the 3D world position of each
+ feature.
+\end_layout
+
+\begin_layout Standard
+A SIFT feature is a function of a small pixel neighbourhood around the interest
+ point, which in turn is a function of the appearance of the scene in the
+ corresponding area.
+ This scene area, when viewed from a two slightly different positions, should
+ result in similar image patches, and hence generate similar SIFT features.
+ Using this property, the stereo camera equipped robot, can correlate SIFT
+ features from the left and right scene images and determine the 3D world
+ position of each using the camera parameters (baseline distance, field
+ of view, and image resolution).
+ Each correlated pair of SIFT features from the left and right image is
+ designated a 
+\emph on
+Stereo Feature
+\emph default
+ and is a tuple of the form 
+\begin_inset Formula $(LeftFeature,RightFeature,WorldPosition)$
+\end_inset
+
+.
+\end_layout
+
+\begin_layout Standard
+To find the 
+\emph on
+Stereo Features 
+\emph default
+for a camera frame, we extract the SIFT features for both the left and right
+ images and match them by comparing their image positions, description vectors
+ and orientation.
+ For each feature in the left image we search the right image for a feature
+ on the same epipolar line with the closest SIFT description vector by Euclidean
+ distance.
+ In the case of the Bumblebee2 stereo camera geometry, the epipolar constraint
+ simply means that any matching features in the left and right image must
+ have the same 
+\begin_inset Formula $y$
+\end_inset
+
+ image coordinate.
+ If the left and right image features have their orientations and description
+ vectors within a threshold distance they are said to match and form a new
+ 
+\emph on
+Stereo Feature
+\emph default
+.
+ The justification for this is that the same point on an object's surface
+ should produce similar SIFT features, in terms of both description vector
+ and orientation, in both the left and right images.
+ Algorithm 
+\begin_inset CommandInset ref
+LatexCommand ref
+reference "alg:Finding-stereo-features."
+
+\end_inset
+
+ gives an overview of the process to match the SIFT features from the left
+ and right image to form the 
+\emph on
+Stereo Features
+\emph default
+ for a frame.
+\end_layout
+
+\begin_layout Standard
+\begin_inset Float algorithm
+wide false
+sideways false
+status collapsed
+
+\begin_layout Algorithm
+
+\series bold
+input:
+\series default
+ left image SIFT features 
+\begin_inset Formula $\rightarrow leftFeatures$
+\end_inset
+
+
+\end_layout
+
+\begin_layout Algorithm
+
+\series bold
+input:
+\series default
+ right image SIFT features 
+\begin_inset Formula $\rightarrow rightFeatures$
+\end_inset
+
+
+\end_layout
+
+\begin_layout Algorithm
+\begin_inset VSpace defskip
+\end_inset
+
+
+\end_layout
+
+\begin_layout Algorithm
+\begin_inset Formula $stereoFeatures\leftarrow\{\}$
+\end_inset
+
+
+\end_layout
+
+\begin_layout Algorithm
+
+\series bold
+forall
+\series default
+ 
+\begin_inset Formula $lFeature$
+\end_inset
+
+ 
+\series bold
+in
+\series default
+ 
+\begin_inset Formula $leftFeatures$
+\end_inset
+
+
+\end_layout
+
+\begin_layout Algorithm
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset Formula $rightEpipolarFeatures\leftarrow epipolarFilter(rightFeatures,lFeature)$
+\end_inset
+
+
+\end_layout
+
+\begin_layout Algorithm
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset Formula $rFeature\leftarrow getDescriptionVectorNearest(rightEpipolarFeatures,lFeature)$
+\end_inset
+
+
+\end_layout
+
+\begin_layout Algorithm
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset Formula $oriDist\leftarrow orientationDistance(lFeature,rFeature)$
+\end_inset
+
+
+\end_layout
+
+\begin_layout Algorithm
+\begin_inset VSpace defskip
+\end_inset
+
+
+\end_layout
+
+\begin_layout Algorithm
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset space ~
+\end_inset
+
+
+\series bold
+if
+\series default
+ 
+\begin_inset Formula $oriDist\leq10\textdegree$
+\end_inset
+
+ 
+\series bold
+then
+\end_layout
+
+\begin_layout Algorithm
+\align left
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset Formula $featureDist\leftarrow featureVectorDistance(lFeature,rFeature)$
+\end_inset
+
+
+\end_layout
+
+\begin_layout Algorithm
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset space ~
+\end_inset
+
+
+\series bold
+if
+\series default
+ 
+\begin_inset Formula $featureDist\leq350$
+\end_inset
+
+ 
+\series bold
+then
+\end_layout
+
+\begin_layout Algorithm
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset Formula $worldPos\leftarrow findPosition(lFeature,rFeature)$
+\end_inset
+
+
+\end_layout
+
+\begin_layout Algorithm
+\align left
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset Formula $newFeature\leftarrow(lFeature,rFeature,worldPos)$
+\end_inset
+
+
+\end_layout
+
+\begin_layout Algorithm
+\align left
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset Formula $stereoFeatures\leftarrow\{newFeature\}\cup stereoFeatures$
+\end_inset
+
+
+\end_layout
+
+\begin_layout Algorithm
+
+\series bold
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset space ~
+\end_inset
+
+endif
+\end_layout
+
+\begin_layout Algorithm
+
+\series bold
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset space ~
+\end_inset
+
+endif
+\end_layout
+
+\begin_layout Algorithm
+
+\series bold
+endfor
+\end_layout
+
+\begin_layout Algorithm
+\begin_inset VSpace defskip
+\end_inset
+
+
+\end_layout
+
+\begin_layout Algorithm
+
+\series bold
+output:
+\series default
+ scene stereo features 
+\begin_inset Formula $\leftarrow stereoFeatures$
+\end_inset
+
+
+\end_layout
+
+\begin_layout Plain Layout
+\begin_inset Caption
+
+\begin_layout Plain Layout
+Finding stereo features.
+\begin_inset CommandInset label
+LatexCommand label
+name "alg:Finding-stereo-features."
+
+\end_inset
+
+
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+The performance of this algorithm is dependent on the choice of threshold
+ for the orientation and description vector difference between the left
+ and right image features (
+\begin_inset Formula $10\textdegree$
+\end_inset
+
+ and 
+\begin_inset Formula $350$
+\end_inset
+
+ respectively in Algorithm 
+\begin_inset CommandInset ref
+LatexCommand ref
+reference "alg:Finding-stereo-features."
+
+\end_inset
+
+).
+ Because the left and right images are concurrent views of the scene, with
+ the same lighting conditions and perspective, we consider a simple threshold
+ as sufficient for stereo feature matching; as opposed to using a more complex
+ threshold or matching method as described in Chapter 3.
+\end_layout
+
+\begin_layout Standard
+We determined suitable values for the two thresholds empirically.
+ This was done by finding corresponding SIFT feature pairs in a large number
+ of stereo images and recording the distance between their description vectors
+ and orientation difference.
+ We found the mean orientation difference to be 
+\begin_inset Formula $3.7^{\circ}$
+\end_inset
+
+ with a standard deviation of 
+\begin_inset Formula $3.1^{\circ}$
+\end_inset
+
+.
+ We set the 
+\begin_inset Formula $orientationThreshold$
+\end_inset
+
+ to be mean plus three standard deviations (
+\begin_inset Formula $\overline{x}+3\sigma$
+\end_inset
+
+), which is equal to 
+\begin_inset Formula $10^{\circ}$
+\end_inset
+
+.
+ 
+\end_layout
+
+\begin_layout Standard
+To determine the description vector threshold we consider the percentage
+ of corresponding stereo feature pairs with a description vector distance
+ less than 
+\begin_inset Formula $x:\{0.0\leq x\leq700.0\}$
+\end_inset
+
+ (we found that none of the feature description vector distances exceeded
+ 
+\begin_inset Formula $700.0$
+\end_inset
+
+), as compared to the distance between non-corresponding feature pairs.
+ These data are summarised in Figure 
+\begin_inset CommandInset ref
+LatexCommand ref
+reference "fig:fv-distance-relationship"
+
+\end_inset
+
+.
+ We set the feature description vector threshold to 
+\begin_inset Formula $350.0$
+\end_inset
+
+ as we found that 
+\begin_inset Formula $95\%$
+\end_inset
+
+ of correctly corresponding stereo feature pairs have description vectors
+ with a distance less than this, while only 
+\begin_inset Formula $1.5\%$
+\end_inset
+
+ of non-corresponding feature pairs fall within this threshold.
+\end_layout
+
+\begin_layout Standard
+Evaluating these threshold parameters we found that the rate of incorrect
+ feature correspondence was 
+\begin_inset Formula $1.3\%$
+\end_inset
+
+.
+ These thresholds should be applicable to a variety of objects and environments
+ since SIFT features are not dependent on the overall scene composition,
+ as they are local image features that consider a small neighbourhood of
+ pixels, and are robust to illumination changes, due to the normalisation
+ of the histogram used to construct the feature's description vector 
+\begin_inset CommandInset citation
+LatexCommand cite
+key "3_Lowe_sift"
+
+\end_inset
+
+.
+ However, cameras of varying quality, and baseline length may require different
+ parameters.
+\end_layout
+
+\begin_layout Standard
+\begin_inset Float figure
+wide false
+sideways false
+status open
+
+\begin_layout Plain Layout
+\align center
+\begin_inset Graphics
+	filename images/sfeatures.png
+	width 70text%
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Plain Layout
+\begin_inset Caption
+
+\begin_layout Plain Layout
+\begin_inset Argument
+status open
+
+\begin_layout Plain Layout
+Stereo SIFT feature distance threshold.
+\end_layout
+
+\end_inset
+
+This shows the percentage of corresponding and non-corresponding SIFT stereo
+ feature pairs with description vectors within a distance threshold.
+\begin_inset CommandInset label
+LatexCommand label
+name "fig:fv-distance-relationship"
+
+\end_inset
+
+
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Subsection
+Feature Tracking and Snapshotting
+\begin_inset CommandInset label
+LatexCommand label
+name "sub:Feature-Tracking-and"
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+After generating the 
+\emph on
+Stereo Features
+\emph default
+ for a frame, the next step is to track the features, dealing with intermittent
+ feature visibility and motion of the features in 3D space.
+ This is done by maintaining a set of feature trajectories, each of which
+ is a series of 
+\begin_inset Formula $(Feature,DetectTime)$
+\end_inset
+
+ tuples.
+ 
+\begin_inset Formula $DetectTime$
+\end_inset
+
+ refers to when the given feature was detected and added to the trajectory.
+ The features that make up a trajectory should correspond to the same point
+ on the surface of an object in the scene.
+ The purpose of keeping track of the feature trajectories is to determine
+ which features are part of the background and which are part of the object
+ held by the gripper.
+\end_layout
+
+\begin_layout Standard
+\begin_inset Float figure
+wide false
+sideways false
+status collapsed
+
+\begin_layout Plain Layout
+\align center
+\begin_inset Graphics
+	filename images/trajectory_matching.png
+	width 90text%
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Plain Layout
+\begin_inset Caption
+
+\begin_layout Plain Layout
+\begin_inset Argument
+status open
+
+\begin_layout Plain Layout
+SIFT feature trajectory tracking.
+\end_layout
+
+\end_inset
+
+Every feature from a new image must be inserted into a matching active trajector
+y, or a new trajectory created if none match.
+ A trajectory is a list of corresponding 
+\emph on
+Stereo Features
+\emph default
+ from previous frames.
+\begin_inset CommandInset label
+LatexCommand label
+name "fig:trajectory-match"
+
+\end_inset
+
+
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Plain Layout
+
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+We maintain a set of active feature trajectories.
+ These are trajectories that have had a new feature added within the last
+ three frames (which is 200 milliseconds as we use a video stream of 15fps).
+ Each 
+\emph on
+Stereo Feature
+\emph default
+ of a new camera frame is compared to every active trajectory and inserted
+ into the best match (this is illustrated in Figure 
+\begin_inset CommandInset ref
+LatexCommand ref
+reference "fig:trajectory-match"
+
+\end_inset
+
+).
+ If none is a sufficiently close match, a new trajectory is created containing
+ that feature and is then added to the set of active trajectories.
+\end_layout
+
+\begin_layout Standard
+The reason for maintaining a list of active trajectories (which have been
+ updated in the last three frames), rather than a list of all trajectories,
+ is our reliance on spatial locality and descriptor locality for matching
+ a new 
+\emph on
+Stereo Feature
+\emph default
+ to a trajectory.
+ We found that in our case, trajectories that have not been updated for
+ more than three frames do not contain sufficient locality for reliable
+ feature matching, resulting in spurious and incorrect matches to new features.
+\end_layout
+
+\begin_layout Standard
+\begin_inset Float algorithm
+wide false
+sideways false
+status collapsed
+
+\begin_layout Algorithm
+
+\series bold
+input:
+\series default
+ new stereo feature 
+\begin_inset Formula $\rightarrow s$
+\end_inset
+
+
+\end_layout
+
+\begin_layout Algorithm
+
+\series bold
+input:
+\series default
+ active feature trajectories 
+\begin_inset Formula $\rightarrow Trajectories$
+\end_inset
+
+
+\end_layout
+
+\begin_layout Algorithm
+\begin_inset VSpace defskip
+\end_inset
+
+
+\end_layout
+
+\begin_layout Algorithm
+\begin_inset Formula $matchingTrajectory\leftarrow null$
+\end_inset
+
+
+\end_layout
+
+\begin_layout Algorithm
+
+\series bold
+forall
+\series default
+ 
+\begin_inset Formula $t$
+\end_inset
+
+ 
+\series bold
+in
+\series default
+ 
+\begin_inset Formula $Trajectories$
+\end_inset
+
+
+\end_layout
+
+\begin_layout Algorithm
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset Formula $(tFeature,tDetectTime)\leftarrow latestFeature(t)$
+\end_inset
+
+
+\end_layout
+
+\begin_layout Algorithm
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset Formula $worldPosDist\leftarrow getWorldPosDist(s,tFeature)$
+\end_inset
+
+
+\end_layout
+
+\begin_layout Algorithm
+\begin_inset VSpace defskip
+\end_inset
+
+
+\end_layout
+
+\begin_layout Algorithm
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset space ~
+\end_inset
+
+
+\series bold
+if
+\series default
+ 
+\begin_inset Formula $worldPosDist\leq(curTime-tDetectTime)\cdot ArmSpeed$
+\end_inset
+
+ 
+\series bold
+then
+\end_layout
+
+\begin_layout Algorithm
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset Formula $descriptorDist\leftarrow SIFTDist(s,tFeature)$
+\end_inset
+
+
+\end_layout
+
+\begin_layout Algorithm
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset Formula $orientationDist\leftarrow oriDist(s,tFeature)$
+\end_inset
+
+
+\end_layout
+
+\begin_layout Algorithm
+\begin_inset VSpace defskip
+\end_inset
+
+
+\end_layout
+
+\begin_layout Algorithm
+
+\series bold
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset space ~
+\end_inset
+
+if
+\series default
+ 
+\begin_inset Formula $descriptorDist\leq250\wedge orientationDist\leq5\textdegree$
+\end_inset
+
+ 
+\series bold
+then
+\end_layout
+
+\begin_layout Algorithm
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset Formula $matchingTrajectory\leftarrow t$
+\end_inset
+
+
+\end_layout
+
+\begin_layout Algorithm
+
+\series bold
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset space ~
+\end_inset
+
+endif
+\end_layout
+
+\begin_layout Algorithm
+
+\series bold
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset space ~
+\end_inset
+
+endif
+\end_layout
+
+\begin_layout Algorithm
+\begin_inset VSpace defskip
+\end_inset
+
+
+\end_layout
+
+\begin_layout Algorithm
+
+\series bold
+endfor
+\end_layout
+
+\begin_layout Algorithm
+\begin_inset VSpace defskip
+\end_inset
+
+
+\end_layout
+
+\begin_layout Algorithm
+
+\series bold
+if
+\series default
+ 
+\begin_inset Formula $matchingTrajectory\neq null$
+\end_inset
+
+ 
+\series bold
+then
+\end_layout
+
+\begin_layout Algorithm
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset Formula $matchingTrajectory\leftarrow(s,currentTime):matchingTrajectory$
+\end_inset
+
+
+\end_layout
+
+\begin_layout Algorithm
+
+\series bold
+else
+\end_layout
+
+\begin_layout Algorithm
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset Formula $Trajectories\leftarrow[(s,currentTime)]\cup Trajectories$
+\end_inset
+
+
+\end_layout
+
+\begin_layout Algorithm
+
+\series bold
+endif
+\end_layout
+
+\begin_layout Algorithm
+\begin_inset VSpace defskip
+\end_inset
+
+
+\end_layout
+
+\begin_layout Algorithm
+
+\series bold
+output: 
+\series default
+updated feature trajectories 
+\begin_inset Formula $\leftarrow allTrajectories$
+\end_inset
+
+
+\end_layout
+
+\begin_layout Plain Layout
+\begin_inset Caption
+
+\begin_layout Plain Layout
+Inserting new stereo feature into a matching trajectory.
+\begin_inset CommandInset label
+LatexCommand label
+name "alg:Inserting-new-stereo"
+
+\end_inset
+
+
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+To determine if a new feature should be inserted into an existing trajectory,
+ we compare the description vector, orientation and 3D world coordinates
+ of the new feature and the most recent feature of the trajectory.
+ Successive  features in a trajectory should have spatial locality in 3D
+ world space, similar feature description vectors and orientations.
+ This is because they should be located on  the same point of an object.
+ For every new 
+\emph on
+Stereo Feature 
+\emph default
+we take all trajectories that have their most recent feature within a threshold
+ distance in 3D world space.
+ The distance threshold is:
+\end_layout
+
+\begin_layout Standard
+\begin_inset Formula 
+\begin{equation}
+(CurrentTime-TrajectoryTime)\cdot ArmSpeed\label{eq:feature_dist_threshold}
+\end{equation}
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+\begin_inset Formula $ArmSpeed$
+\end_inset
+
+ is the maximum arm movement speed, 
+\emph on
+
+\begin_inset Formula $CurrentTime$
+\end_inset
+
+ 
+\emph default
+is the current time, and 
+\emph on
+
+\begin_inset Formula $TrajectoryTime$
+\end_inset
+
+ 
+\emph default
+is the time-stamp when the particular trajectory was last updated with a
+ new feature.
+ The justification for this threshold is that no feature on the grasped
+ object can move faster than the arm and it is not necessary to track features
+ of faster moving objects in the background.
+\end_layout
+
+\begin_layout Standard
+From this set of nearby trajectories we find the one with the closest (by
+ Euclidean distance) description vector to the new 
+\emph on
+Stereo Feature.
+
+\emph default
+ If the description vector and orientation difference between the features
+ is less than a fixed threshold then the new feature is inserted into this
+ matching trajectory.
+ The process for matching a single feature to a trajectory is described
+ in detail in Algorithm 
+\begin_inset CommandInset ref
+LatexCommand ref
+reference "alg:Inserting-new-stereo"
+
+\end_inset
+
+.
+ The description vector and orientation thresholds are determined by examining
+ the variability of the description vector and orientation of features during
+ linear movement (movement such that the underlying object remains in the
+ same orientation in the image).
+ We plot the average description vector distance and orientation difference
+ between a feature and its corresponding match in each of the previous 
+\begin_inset Formula $30$
+\end_inset
+
+ frames; this is shown in Figure 
+\begin_inset CommandInset ref
+LatexCommand ref
+reference "fig:trajectory-variability-feature"
+
+\end_inset
+
+.
+ After 3 frames the average distance between description vectors in a trajectory
+ is 
+\begin_inset Formula $100$
+\end_inset
+
+ with a standard deviation of 
+\begin_inset Formula $50$
+\end_inset
+
+, and the mean orientation difference is 
+\begin_inset Formula $1.3^{\circ}$
+\end_inset
+
+ with a standard deviation of 
+\begin_inset Formula $1.2^{\circ}$
+\end_inset
+
+.
+ We chose the thresholds of 
+\begin_inset Formula $250$
+\end_inset
+
+ and 
+\begin_inset Formula $5\textdegree$
+\end_inset
+
+ by taking the mean and adding three standard deviations (
+\begin_inset Formula $\overline{x}+3\sigma$
+\end_inset
+
+) for both the feature descriptor and orientation difference.
+\end_layout
+
+\begin_layout Standard
+If for a new 
+\emph on
+Stereo Feature
+\emph default
+ no active trajectory is found matching the above criteria, an empty trajectory
+ is created and the feature is inserted into this new trajectory.
+\end_layout
+
+\begin_layout Standard
+\begin_inset Float figure
+wide false
+sideways false
+status collapsed
+
+\begin_layout Plain Layout
+\align center
+\begin_inset Graphics
+	filename images/trajectory_dv.png
+	width 70text%
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Plain Layout
+\begin_inset VSpace defskip
+\end_inset
+
+
+\end_layout
+
+\begin_layout Plain Layout
+\begin_inset VSpace defskip
+\end_inset
+
+
+\end_layout
+
+\begin_layout Plain Layout
+\begin_inset VSpace defskip
+\end_inset
+
+
+\end_layout
+
+\begin_layout Plain Layout
+\align center
+\begin_inset Graphics
+	filename images/trajectory_ori.png
+	width 70text%
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Plain Layout
+\align center
+\begin_inset Caption
+
+\begin_layout Plain Layout
+\begin_inset Argument
+status open
+
+\begin_layout Plain Layout
+SIFT feature trajectory thresholds.
+\end_layout
+
+\end_inset
+
+These graphs show the increasing description vector and orientation difference
+ between the most recent 
+\emph on
+Stereo Feature 
+\emph default
+of a trajectory and older features of the same trajectory.
+ The error bars represent the standard deviation.
+\begin_inset CommandInset label
+LatexCommand label
+name "fig:trajectory-variability-feature"
+
+\end_inset
+
+
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+The purpose of tracking feature trajectories is to use motion to separate
+ foreground object features from the background, which then form a feature
+ database used for object recognition.
+ While the object is being moved by the robot, we periodically take snapshots
+ of the most recent features of trajectories that have a displacement over
+ a certain threshold.
+ The displacement of a trajectory is defined as the sum of the distance
+ between the 3D world positions of subsequent features of the trajectory.
+ The frequency of feature snapshots is dependent on several factors: the
+ camera frame rate, speed with which the robot moves the object, and the
+ desired level of detail for the learned object feature database.
+ In our case, we perform a snapshot every
+\emph on
+ 
+\emph default
+five frames.
+ The snapshotted trajectories are ones that have moved in 3D world space
+ at least 
+\begin_inset Formula $(FramesSinceLastSnapshot-1)*ArmSpeed$
+\end_inset
+
+ since the last snapshot.
+ These trajectories should correspond to the robot arm, the held object,
+ and any background motion.
+ Any static background features should belong to trajectories which have
+ a displacement under the threshold, and hence will not be included in the
+ snapshot.
+ The next step is to separate out the arm features and background motion
+ from the snapshotted trajectories.
+ The remaining snapshotted object features are then inserted into a database,
+ which can later be used for object recognition and localisation.
+ Figure 
+\begin_inset CommandInset ref
+LatexCommand ref
+reference "fig:snapshot-example"
+
+\end_inset
+
+ shows an example of a snapshot.
+\end_layout
+
+\begin_layout Standard
+\begin_inset Float figure
+wide false
+sideways false
+status collapsed
+
+\begin_layout Plain Layout
+\align center
+\begin_inset Graphics
+	filename images/trails.png
+	width 60text%
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Plain Layout
+\begin_inset Caption
+
+\begin_layout Plain Layout
+\begin_inset Argument
+status open
+
+\begin_layout Plain Layout
+SIFT feature trajectory and snapshot example.
+\end_layout
+
+\end_inset
+
+This image shows a snapshot of features.
+ The 
+\emph on
+Stereo Feature
+\emph default
+ trajectory paths are indicated in green.
+ The robot arm and held object features have long trails because they are
+ moving through the scene.
+ The red points indicate 
+\emph on
+Stereo Features
+\emph default
+ that form a snapshot due to having moved over a threshold amount.
+ Note that this is before arm features are filtered out.
+\begin_inset CommandInset label
+LatexCommand label
+name "fig:snapshot-example"
+
+\end_inset
+
+
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Subsection
+Separating Arm and Object Features
+\begin_inset CommandInset label
+LatexCommand label
+name "sub:Separating-Arm-and"
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+Since the source of object motion is movement by the robot's arm and gripper,
+ trajectories produced by the robot itself must be removed.
+ One way this can be done is if an accurate mapping can be made between
+ arm joint angles and the 3D world space regions occupied by the arm, then
+ any snapshot features that fall in these regions can be labelled as arm
+ features and removed.
+ The disadvantage of this approach is it requires very accurate kinematics,
+ a high degree of synchronisation with the vision system, and an accurate
+ 3D model of the robot arm and gripper.
+ 
+\end_layout
+
+\begin_layout Standard
+A different method is to use a database of arm SIFT features to compare
+ against the snapshot and remove any matching features.
+ There are two approaches to generating the arm feature database.
+ The first is to extract SIFT features from segmented and labelled training
+ images of the robot arm and insert them into a database.
+ However, this assumes the availability of appropriate training images,
+ which may not be the case.
+ The second approach is to have the robot perform the feature snapshotting
+ steps without holding an object, and instead learn snapshots of arm features.
+ In this way the robot can autonomously generate a database of arm SIFT
+ features as an initialisation procedure.
+ We decided to take this last approach as our aim is to minimise human intervent
+ion in the entire process of object learning.
+\end_layout
+
+\begin_layout Standard
+With the generated robot arm feature database, we can filter out arm features
+ from the feature snapshots, leaving behind held object features.
+ For matching snapshot features to the arm database, we use Lowe's method
+ 
+\begin_inset CommandInset citation
+LatexCommand cite
+key "3_Lowe_sift"
+
+\end_inset
+
+ for SIFT feature matching.
+ This involves searching the arm database for the nearest and second-nearest
+ features to the snapshot feature.
+ If the Euclidean distance between the SIFT description vectors of the snapshot
+ feature and the nearest database arm feature is less than 80% of the distance
+ to the second-nearest feature, then the snapshot feature matches the arm
+ feature.
+ We remove from each snapshot all features that match an arm feature, the
+ remaining features are labelled as object features.
+ The justification for this approach is that the density of features in
+ the neighbourhood of a feature indicates how discriminatory that feature's
+ description vector is.
+ The 80% value was determined by Lowe experimentally 
+\begin_inset CommandInset citation
+LatexCommand cite
+key "3_lowe_sift_object_recognition"
+
+\end_inset
+
+ to give the optimal trade-off between false positives and false negatives.
+\end_layout
+
+\begin_layout Standard
+The reason we use this nearest neighbour method of matching, as opposed
+ to the bipartite matching method described in Chapter 3, is that we do
+ not have a geometric dependency between matched features.
+ The robot gripper can be in many different positions, almost fully closed
+ when gripping small objects, or almost fully open when gripping large objects.
+ As a result, if we were to match using the method described in Chapter
+ 3, we would need to learn the feature appearance model of the gripper for
+ all of the different grip sizes.
+ Instead we take the approach of matching individual snapshot features against
+ the database of arm features based only on the feature description vector.
+\end_layout
+
+\begin_layout Subsection
+Filtering Background Motion
+\begin_inset CommandInset label
+LatexCommand label
+name "sub:Filtering-Background-Motion"
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+The features that comprise a snapshot can come from three sources, the held
+ object, the robot arm and gripper, and any background motion.
+ Static background features are not included as their trajectory displacements
+ are less than the threshold required (described in Subsection 
+\begin_inset CommandInset ref
+LatexCommand ref
+reference "sub:Feature-Tracking-and"
+
+\end_inset
+
+).
+ In the previous section we dealt with filtering out the robot arm features.
+ The next step is to filter out background motion features.
+\end_layout
+
+\begin_layout Standard
+Background motion can be filtered out in several ways.
+ First, distant features outside the robot's workspace can be removed by
+ examining their 3D world position.
+ If a feature is further away from the robot that the robot's maximum reach,
+ then it is safe to assume the feature does not belong to the held object.
+ A further refinement is to use arm kinematics to determine the approximate
+ gripper position in each frame and only consider features within a threshold
+ distance of this point.
+ However, it is possible to have background motion that falls within this
+ threshold distance.
+ A further refinement is necessary.
+\end_layout
+
+\begin_layout Standard
+Our solution to this problem is to use the fact that the gripper and the
+ features of the held object will follow similar trajectories in 3D world
+ space.
+ By comparing a feature trajectory to the path of the robot arm, it is possible
+ to determine if it belongs to background motion or the held object.
+ There are two ways the robot arm's path can be determined.
+ The first is by using kinematics and the joint angles.
+ We can track the robot arm joints and for every frame use these to determine
+ the arm position, thus building a trajectory.
+ However, this approach requires accurate arm kinematic feedback synchronised
+ with the vision system.
+ An alternate approach is to use the detected arm feature trajectories (describe
+d in the previous section) to determine the robot arm motion.
+ 
+\end_layout
+
+\begin_layout Standard
+\begin_inset Float figure
+wide false
+sideways false
+status open
+
+\begin_layout Plain Layout
+\align center
+\begin_inset Graphics
+	filename images/trajectory_norm.png
+	width 80text%
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Plain Layout
+\begin_inset Caption
+
+\begin_layout Plain Layout
+\begin_inset Argument
+status open
+
+\begin_layout Plain Layout
+Comparing feature trajectory paths.
+\end_layout
+
+\end_inset
+
+Feature trajectory position normalisation.
+ When comparing two trajectories, both have their comprising feature world
+ positions shifted so that the trajectory starts at the origin.
+\begin_inset CommandInset label
+LatexCommand label
+name "fig:trajectory-normalisation"
+
+\end_inset
+
+
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+In the previous section, we described how to determine the feature trajectories
+ of a snapshot which belong to the robot arm.
+ Each such trajectory can be interpreted as a series of 3D world space positions
+, corresponding to the positions of the trajectory's features.
+ This series of positions can be used to compare against
+\begin_inset space ~
+\end_inset
+
+other trajectories.
+ If the difference is over a threshold then we conclude that the trajectory
+ cannot belong to the held object as it has not followed a similar path
+ to the arm.
+ To compare two trajectories, a list of feature positions is extracted from
+ each and normalised to the origin.
+ Normalising a series of positions refers to shifting them such that the
+ latest position of the trajectory is at the origin (refer to Figure 
+\begin_inset CommandInset ref
+LatexCommand ref
+reference "fig:trajectory-normalisation"
+
+\end_inset
+
+).
+ The individual feature positions of the trajectory are altered as follows:
+\end_layout
+
+\begin_layout Standard
+\begin_inset Formula 
+\begin{equation}
+p_{n},p_{n+1},...,p_{m}\rightarrow(p_{n}-p_{m}),(p_{n+1}-p_{m}),...,(p_{m}-p_{m})\label{eq:feature_pos_norm}
+\end{equation}
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+where 
+\begin_inset Formula $p_{n}$
+\end_inset
+
+ is the 3D position of a trajectory feature at frame 
+\begin_inset Formula $n$
+\end_inset
+
+.
+ To calculate the difference between two trajectories, take the average
+ distance between positions on matching frames across the two normalised
+ position lists 
+\begin_inset Formula $P$
+\end_inset
+
+ and 
+\begin_inset Formula $Q$
+\end_inset
+
+:
+\end_layout
+
+\begin_layout Standard
+\begin_inset Formula 
+\begin{equation}
+Dist(P,Q)=\frac{1}{n}\sum\left|p_{a}-q_{a}\right|\label{eq:trajectory_dist}
+\end{equation}
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+where 
+\begin_inset Formula $n$
+\end_inset
+
+ is the number of frames in which both trajectories have a recorded feature,
+ 
+\begin_inset Formula $p_{a}$
+\end_inset
+
+ is the normalised position of the first trajectory at frame number 
+\begin_inset Formula $a$
+\end_inset
+
+, and 
+\begin_inset Formula $q_{a}$
+\end_inset
+
+ is the normalised position of the second trajectory at the same frame number.
+ 
+\end_layout
+
+\begin_layout Standard
+We remove any feature trajectories that are not within a threshold distance
+ of an arm feature trajectory as determined by the above distance measure.
+ We determined the appropriate threshold by empirically examining the variabilit
+y of trajectories of a rigid object.
+ We found that the average distance using the above measure of feature trajector
+ies on a rigid object is 
+\begin_inset Formula $0.21cm$
+\end_inset
+
+ with a standard deviation of 
+\begin_inset Formula $0.25cm$
+\end_inset
+
+.
+ We set the threshold to be 
+\begin_inset Formula $\bar{x}+3\sigma$
+\end_inset
+
+ which is 
+\begin_inset Formula $0.96cm$
+\end_inset
+
+.
+ Any feature trajectory that is not within this threshold distance from
+ at least one arm feature trajectory is considered background motion and
+ filtered out from a snapshot.
+ Figure 
+\begin_inset CommandInset ref
+LatexCommand ref
+reference "fig:Example-of-motion-filtering"
+
+\end_inset
+
+ shows the effectiveness of this approach at removing background motion
+ trajectory features from a snapshot.
+\end_layout
+
+\begin_layout Standard
+This approach to trajectory filtering should be equally applicable in the
+ case where accurate and synchronised arm kinematics is available.
+ In this case, rather than using an arm feature trajectory positions, we
+ would use the arm kinematic positions to compare against all other trajectories.
+ We leave this for future work.
+\end_layout
+
+\begin_layout Standard
+One caveat of this method for background motion filtering is its poor performanc
+e when the motion of the robot gripper and held object has a large rotation
+ component, as compared to the translation component.
+ In the case of rotation, the path of each feature depends on its distance
+ from the axis of rotation, which is not suitable for this approach.
+ In practice we found that a small rotation component can be tolerated by
+ the background motion filter.
+ We discuss ways to address these limitations in Section 
+\begin_inset CommandInset ref
+LatexCommand ref
+reference "sec:Discussion-2"
+
+\end_inset
+
+.
+\end_layout
+
+\begin_layout Standard
+\begin_inset Float figure
+wide false
+sideways false
+status open
+
+\begin_layout Plain Layout
+\align center
+\begin_inset Graphics
+	filename images/motion_filter_out.png
+	width 80text%
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Plain Layout
+\begin_inset Caption
+
+\begin_layout Plain Layout
+\begin_inset Argument
+status open
+
+\begin_layout Plain Layout
+Background motion filtering.
+\end_layout
+
+\end_inset
+
+Example of motion filtering in action.
+ The green trails in the left image represent the feature trajectory paths,
+ the blue points in the right image indicate the snapshotted object features,
+ and the red points indicate the detected arm features.
+ Note that background motion trajectories of the blue box are successfully
+ filtered out and do not contribute to the snapshotted features.
+\begin_inset CommandInset label
+LatexCommand label
+name "fig:Example-of-motion-filtering"
+
+\end_inset
+
+
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Plain Layout
+
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Subsection
+Refining the Segmentation
+\begin_inset CommandInset label
+LatexCommand label
+name "sub:Refining-the-Segmentation"
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+In section 
+\begin_inset CommandInset ref
+LatexCommand ref
+reference "sub:Separating-Arm-and"
+
+\end_inset
+
+ we described a method for separating out the features belonging to the
+ robot arm and gripper from the snapshot, with the aim of filtering out
+ all features not belonging to the held object.
+ This is done by learning an arm feature database that can be matched against
+ snapshot features.
+ However, due to noise or lighting variations, some snapshot arm features
+ may fail to match the stored database and instead be incorrectly labelled
+ as object features.
+ Additionally, if the arm appearance changes as compared to its state when
+ the database was learned, some arm features may not match the database.
+ An arm may change appearance due to factors such as accumulated dirt or
+ wear and tear.
+ The result of incorrect matches is arm features incorrectly labelled as
+ object features.
+ This could detrimentally affect the accuracy of the generated object feature
+ database during object recognition and localisation.
+ 
+\end_layout
+
+\begin_layout Standard
+We address this problem by comparing the features of snapshots of different
+ objects.
+ Our solution is to use the fact that, due to the highly discriminatory
+ nature of SIFT features
+\begin_inset Note Note
+status open
+
+\begin_layout Plain Layout
+cite
+\end_layout
+
+\end_inset
+
+, similar features appearing in snapshots of different objects are likely
+ to be misclassified arm or background features.
+ Assuming that the objects the robot learns are visually unique, the only
+ common features between snapshots of different objects must belong to the
+ robot arm or the background.
+\end_layout
+
+\begin_layout Standard
+When a set of feature snapshots has been generated for a number of objects,
+ we consider each object in turn and all of the feature snapshots of that
+ object are compared against the snapshots of the remaining objects.
+ Call the set of snapshots belonging to the current object 
+\begin_inset Formula $A$
+\end_inset
+
+, and the set of snapshots belonging to the remaining objects 
+\begin_inset Formula $B$
+\end_inset
+
+.
+ Every snapshot 
+\begin_inset Formula $a\in A$
+\end_inset
+
+ is compared against the snapshots 
+\begin_inset Formula $b\in B$
+\end_inset
+
+, searching for matching features.
+ Depending on the number of objects learned, it may be computationally prohibiti
+ve to compare against all of the snapshots of every object.
+ In this case, a random subset of snapshots 
+\begin_inset Formula $b\in B$
+\end_inset
+
+ can be used instead, the size depending on the desired accuracy and time
+ constraints.
+\end_layout
+
+\begin_layout Standard
+When comparing a snapshot 
+\begin_inset Formula $a$
+\end_inset
+
+ to a snapshot 
+\begin_inset Formula $b$
+\end_inset
+
+, we search for features that match.
+ The matching criterion is similar to that used for matching arm features:
+ feature 
+\begin_inset Formula $f_{a}$
+\end_inset
+
+ from snapshot 
+\begin_inset Formula $a$
+\end_inset
+
+ matches feature 
+\begin_inset Formula $f_{b}$
+\end_inset
+
+ from snapshot 
+\begin_inset Formula $b$
+\end_inset
+
+ if 
+\begin_inset Formula $f_{b}$
+\end_inset
+
+ is the nearest neighbour to 
+\begin_inset Formula $f_{a}$
+\end_inset
+
+ of all features occurring in 
+\begin_inset Formula $b$
+\end_inset
+
+ using the SIFT descriptor distance metric, and this distance is less than
+ 80% of the distance to the second nearest neighbour.
+ All features 
+\begin_inset Formula $f_{a}$
+\end_inset
+
+ with a matching feature in 
+\begin_inset Formula $b$
+\end_inset
+
+ are marked as arm features, which are then removed from the snapshot 
+\begin_inset Formula $a$
+\end_inset
+
+.
+ This process for finding mislabelled arm features by correlating features
+ across snapshots of different objects is summarised in Algorithm 
+\begin_inset CommandInset ref
+LatexCommand ref
+reference "alg:Finding-mislabeled-arm"
+
+\end_inset
+
+.
+\end_layout
+
+\begin_layout Standard
+\begin_inset Float algorithm
+wide false
+sideways false
+status collapsed
+
+\begin_layout Plain Layout
+
+\series bold
+input:
+\series default
+ current snapshot 
+\begin_inset Formula $\rightarrow a$
+\end_inset
+
+
+\end_layout
+
+\begin_layout Plain Layout
+
+\series bold
+input:
+\series default
+ all snapshots of other objects 
+\begin_inset Formula $\rightarrow B$
+\end_inset
+
+
+\end_layout
+
+\begin_layout Plain Layout
+\begin_inset VSpace defskip
+\end_inset
+
+
+\end_layout
+
+\begin_layout Plain Layout
+\begin_inset Formula $arm\_features\leftarrow\{\}$
+\end_inset
+
+
+\end_layout
+
+\begin_layout Plain Layout
+
+\series bold
+forall
+\series default
+ 
+\begin_inset Formula $b$
+\end_inset
+
+ 
+\series bold
+in
+\series default
+ 
+\begin_inset Formula $B$
+\end_inset
+
+
+\end_layout
+
+\begin_layout Plain Layout
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset space ~
+\end_inset
+
+
+\series bold
+forall
+\series default
+ 
+\begin_inset Formula $f_{a}$
+\end_inset
+
+ 
+\series bold
+in
+\series default
+ 
+\begin_inset Formula $objectFeatures(a)$
+\end_inset
+
+
+\end_layout
+
+\begin_layout Plain Layout
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset Formula $f_{b}\leftarrow getNearestFeatureIn(b,f_{a})$
+\end_inset
+
+
+\end_layout
+
+\begin_layout Plain Layout
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset Formula $second\_nearest\leftarrow getSecondNearestFeatureIn(b,f_{a})$
+\end_inset
+
+
+\end_layout
+
+\begin_layout Plain Layout
+\begin_inset VSpace defskip
+\end_inset
+
+
+\end_layout
+
+\begin_layout Plain Layout
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset space ~
+\end_inset
+
+
+\series bold
+if
+\series default
+ 
+\begin_inset Formula $distance(f_{a},f_{b})<0.8\cdot distance(f_{a},second\_nearest)$
+\end_inset
+
+ 
+\series bold
+then
+\end_layout
+
+\begin_layout Plain Layout
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset Formula $arm\_features\leftarrow\{f_{a}\}\cup arm\_features$
+\end_inset
+
+
+\end_layout
+
+\begin_layout Plain Layout
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset space ~
+\end_inset
+
+
+\series bold
+endif
+\end_layout
+
+\begin_layout Plain Layout
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset space ~
+\end_inset
+
+
+\series bold
+endfor
+\end_layout
+
+\begin_layout Plain Layout
+
+\series bold
+endfor
+\end_layout
+
+\begin_layout Plain Layout
+\begin_inset VSpace defskip
+\end_inset
+
+
+\end_layout
+
+\begin_layout Plain Layout
+
+\series bold
+output:
+\series default
+ mislabelled arm features 
+\begin_inset Formula $\leftarrow arm\_features$
+\end_inset
+
+
+\end_layout
+
+\begin_layout Plain Layout
+\begin_inset Caption
+
+\begin_layout Plain Layout
+Finding mislabelled arm features.
+\begin_inset CommandInset label
+LatexCommand label
+name "alg:Finding-mislabeled-arm"
+
+\end_inset
+
+
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Plain Layout
+
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Section
+Evaluation
+\begin_inset CommandInset label
+LatexCommand label
+name "sec:Evaluation"
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+To test the effectiveness of our feature segmentation method, we examine
+ the reliability of the segmentation in different circumstances, as well
+ as the object feature recognition performance of the database that is generated
+ using the segmented features.
+\end_layout
+
+\begin_layout Standard
+To test the accuracy of the feature segmentation, the robot executes the
+ algorithm described in this section while moving a grasped object through
+ a cluttered scene.
+ The motion performed by the robot during a single trial is to move the
+ object backward and forward in a straight line 
+\begin_inset Formula $50cm$
+\end_inset
+
+ in length.
+ During this motion, twenty feature snapshots are performed, one every five
+ frames.
+ For each snapshot we record the total number of correct object features
+ and arm features detected, as well as the total number of incorrectly labelled
+ object and arm features.
+ We perform this process in different scenarios, three separate times for
+ an object, across ten different objects, for a total of thirty trials for
+ each scenario.
+ The objects used are simple shapes such as a soft drink cans and cubes
+ of edge length 7cm with an image on the side facing the camera (see Figure
+ 
+\begin_inset CommandInset ref
+LatexCommand ref
+reference "fig:test-segment-objects"
+
+\end_inset
+
+).
+ For each trial, we sum the total number of detected features from the 20
+ snapshots which comprise the trial and present the data in table format.
+\end_layout
+
+\begin_layout Standard
+\begin_inset Float figure
+wide false
+sideways false
+status open
+
+\begin_layout Plain Layout
+\align center
+\begin_inset Graphics
+	filename images/img.png
+	width 70text%
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Plain Layout
+\begin_inset Caption
+
+\begin_layout Plain Layout
+\begin_inset Argument
+status open
+
+\begin_layout Plain Layout
+Test objects for feature segmentation.
+\end_layout
+
+\end_inset
+
+Some of the objects used to test the robot learning of object recognition.
+\begin_inset CommandInset label
+LatexCommand label
+name "fig:test-segment-objects"
+
+\end_inset
+
+
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+In the first scenario, we test the object feature segmentation in a cluttered
+ environment with no background motion.
+ The average number of features detected per trial is shown in Table 
+\begin_inset CommandInset ref
+LatexCommand ref
+reference "tab:baseline-feature-detect"
+
+\end_inset
+
+.
+ We can see that the number of background and arm features misclassified
+ as object features is low compared to the number of correctly classified
+ object features.
+ All of the 
+\emph on
+False Object Features
+\emph default
+ were due to arm features incorrectly classified as object features.
+ No background features were classified as object features.
+\end_layout
+
+\begin_layout Standard
+\begin_inset Float table
+wide false
+sideways false
+status collapsed
+
+\begin_layout Plain Layout
+\align center
+\begin_inset Tabular
+<lyxtabular version="3" rows="5" columns="2">
+<features tabularvalignment="middle">
+<column alignment="center" valignment="top" width="0">
+<column alignment="center" valignment="top" width="0">
+<row>
+<cell alignment="center" valignment="top" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" bottomline="true" leftline="true" rightline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+
+\series bold
+Features Detected
+\end_layout
+
+\end_inset
+</cell>
+</row>
+<row>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+
+\emph on
+True Arm Features
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" bottomline="true" leftline="true" rightline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+328
+\end_layout
+
+\end_inset
+</cell>
+</row>
+<row>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+
+\emph on
+True Object Features
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" bottomline="true" leftline="true" rightline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+378
+\end_layout
+
+\end_inset
+</cell>
+</row>
+<row>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+
+\emph on
+False Arm Features
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" bottomline="true" leftline="true" rightline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+8
+\end_layout
+
+\end_inset
+</cell>
+</row>
+<row>
+<cell alignment="center" valignment="top" topline="true" bottomline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+
+\emph on
+False Object Features
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" bottomline="true" leftline="true" rightline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+40
+\end_layout
+
+\end_inset
+</cell>
+</row>
+</lyxtabular>
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Plain Layout
+\begin_inset Caption
+
+\begin_layout Plain Layout
+The average number of correctly and incorrectly identified object and arm
+ features per trial, across 10 different objects, with three trials per
+ object.
+ Each trial consists of 20 snapshots.
+\begin_inset CommandInset label
+LatexCommand label
+name "tab:baseline-feature-detect"
+
+\end_inset
+
+
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Plain Layout
+
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+The second scenario involved testing the effectiveness of the background
+ motion filtering of our feature segmentation method.
+ This is done by introducing background motion into the scene, in the form
+ of a textured object (the same form and size as the held object) moving
+ in a random path in the vicinity of the robot arm.
+ This motion is performed by a human operator.
+ We then compared the performance of the segmentation algorithm with background
+ motion filtering enabled and disabled.
+ In each case the number of correct and incorrect arm and object features
+ found during the course of the arm movement is counted.
+ The average number of features detected, across 30 trials, is presented
+ in Table 
+\begin_inset CommandInset ref
+LatexCommand ref
+reference "tab:Motion-filtering-reduces"
+
+\end_inset
+
+.
+ It can be seen that the effect of background motion filtering is a ten
+ fold reduction in false object features, removing feature trajectories
+ of the object moving in the background.
+ The remaining false object features are due to misclassified arm features.
+ The downside is a small reduction in the number of detected object features.
+\end_layout
+
+\begin_layout Standard
+\begin_inset Float table
+wide false
+sideways false
+status collapsed
+
+\begin_layout Plain Layout
+\align center
+\begin_inset Tabular
+<lyxtabular version="3" rows="5" columns="4">
+<features tabularvalignment="middle">
+<column alignment="center" valignment="top" width="0">
+<column alignment="center" valignment="top" width="0">
+<column alignment="center" valignment="top" width="0">
+<column alignment="center" valignment="top" width="0">
+<row>
+<cell alignment="center" valignment="top" topline="true" bottomline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+
+\series bold
+Motion Filtering
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" bottomline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+
+\emph on
+Disabled
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" bottomline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+
+\emph on
+Enabled
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" bottomline="true" leftline="true" rightline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+
+\emph on
+Change
+\end_layout
+
+\end_inset
+</cell>
+</row>
+<row>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+
+\emph on
+True Arm Features
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+289
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+289
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" rightline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+-
+\end_layout
+
+\end_inset
+</cell>
+</row>
+<row>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+
+\emph on
+True Object Features
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+312
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+282
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" rightline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+-9%
+\end_layout
+
+\end_inset
+</cell>
+</row>
+<row>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+
+\emph on
+False Arm Features
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+3
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+6
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" rightline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
++100%
+\end_layout
+
+\end_inset
+</cell>
+</row>
+<row>
+<cell alignment="center" valignment="top" topline="true" bottomline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+
+\emph on
+False Object Features
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" bottomline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+366
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" bottomline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+38
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" bottomline="true" leftline="true" rightline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+-89%
+\end_layout
+
+\end_inset
+</cell>
+</row>
+</lyxtabular>
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Plain Layout
+\begin_inset Caption
+
+\begin_layout Plain Layout
+This table shows the number of features labelled by the feature segmentation
+ algorithm, in the presence of background motion, with motion filtering
+ disabled and enabled.
+ It can be seen that motion filtering greatly reduces false positive object
+ features in the presence of background motion.
+\begin_inset CommandInset label
+LatexCommand label
+name "tab:Motion-filtering-reduces"
+
+\end_inset
+
+
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Plain Layout
+
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+The next test scenario is to test the effectiveness of the segmentation
+ refinement to account for arm features falsely classified as object features.
+ To test this, we alter the appearance of the arm by attaching a textured
+ marker to the robot gripper (shown in Figure 
+\begin_inset CommandInset ref
+LatexCommand ref
+reference "fig:The-marker-attached"
+
+\end_inset
+
+).
+ This marker is not present when the robot is learning the SIFT features
+ of the arm, it is only present when the robot is learning the held object
+ features.
+ This simulates a scenario where the robot arm becomes worn out or dirty
+ through use, altering its appearance as a result.
+ Normally the features of the textured marker would be incorrectly classified
+ as object features, as they will not match the learned arm feature database.
+ However, by cross-matching learned object features across multiple different
+ objects, we can determine the common features and conclude that they must
+ belong to the arm (assuming objects distinct in appearance).
+\end_layout
+
+\begin_layout Standard
+\begin_inset Float figure
+wide false
+sideways false
+status open
+
+\begin_layout Plain Layout
+\align center
+\begin_inset Graphics
+	filename images/woo.png
+	width 60text%
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Plain Layout
+\begin_inset Caption
+
+\begin_layout Plain Layout
+\begin_inset Argument
+status open
+
+\begin_layout Plain Layout
+Arm appearance alteration for testing.
+\end_layout
+
+\end_inset
+
+The marker attached to the robot gripper is circled in red.
+ This is used to test the effectiveness of the feature correlation filtering.
+\begin_inset CommandInset label
+LatexCommand label
+name "fig:The-marker-attached"
+
+\end_inset
+
+
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+To evaluate the effectiveness of the cross-matching between object snapshots,
+ the robot performs the feature segmentation and snapshotting for all ten
+ objects (with twenty snapshots per object).
+ Following this, the snapshots of each object are iterated through and the
+ features are matching against the nine other objects.
+ Any matching object features are re-labelled as arm features.
+ The results are presented in Table 
+\begin_inset CommandInset ref
+LatexCommand ref
+reference "tab:Feature-cross-correlation"
+
+\end_inset
+
+.
+ When correlating snapshot features for each object, all nine other objects
+ are compared against, with twenty snapshots per object.
+ The result is that the number of false object features is reduced by 81%
+ when correlation filtering is enabled, due to the removal of the texture
+ marker features from the object features set.
+ These results are summarised in Table 
+\begin_inset CommandInset ref
+LatexCommand ref
+reference "tab:Feature-cross-correlation"
+
+\end_inset
+
+.
+\end_layout
+
+\begin_layout Standard
+\begin_inset Float table
+wide false
+sideways false
+status collapsed
+
+\begin_layout Plain Layout
+\align center
+\begin_inset Tabular
+<lyxtabular version="3" rows="5" columns="4">
+<features tabularvalignment="middle">
+<column alignment="center" valignment="top" width="0">
+<column alignment="center" valignment="top" width="0">
+<column alignment="center" valignment="top" width="0">
+<column alignment="center" valignment="top" width="0">
+<row>
+<cell alignment="center" valignment="top" topline="true" bottomline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+
+\series bold
+Cross-Correlation
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" bottomline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+
+\emph on
+Disabled
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" bottomline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+
+\emph on
+Enabled
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" bottomline="true" leftline="true" rightline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+
+\emph on
+Change
+\end_layout
+
+\end_inset
+</cell>
+</row>
+<row>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+
+\emph on
+True Arm Features
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+253
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+581
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" rightline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
++129%
+\end_layout
+
+\end_inset
+</cell>
+</row>
+<row>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+
+\emph on
+True Object Features
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+446
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+494
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" rightline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
++10%
+\end_layout
+
+\end_inset
+</cell>
+</row>
+<row>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+
+\emph on
+False Arm Features
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+1
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+6
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" rightline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
++500%
+\end_layout
+
+\end_inset
+</cell>
+</row>
+<row>
+<cell alignment="center" valignment="top" topline="true" bottomline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+
+\emph on
+False Object Features
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" bottomline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+380
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" bottomline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+72
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" bottomline="true" leftline="true" rightline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+-81%
+\end_layout
+
+\end_inset
+</cell>
+</row>
+</lyxtabular>
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Plain Layout
+\begin_inset Caption
+
+\begin_layout Plain Layout
+Feature cross correlation reduces false positive object features when the
+ arm appearance changes.
+\begin_inset CommandInset label
+LatexCommand label
+name "tab:Feature-cross-correlation"
+
+\end_inset
+
+
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+Finally, we tested the object recognition accuracy of the generated object
+ feature database.
+ The goal of the segmentation algorithm is for a robot to learn the SIFT
+ features of an object and use these to later recognise and localise the
+ object in a scene.
+ To test the effectiveness of the segmentation algorithm for this application,
+ we use the snapshotted object features generated by the robot to create
+ an object feature database.
+ We then use this database to match against various scene images containing
+ the learned object (see Appendix section 
+\begin_inset CommandInset ref
+LatexCommand ref
+reference "sec:Learned-Object-Feature_appendix"
+
+\end_inset
+
+), recording the number of object features successfully matched.
+ The performance of the autonomously generated object feature database is
+ compared to an object feature database generated from manually segmented
+ views of the object.
+ 
+\end_layout
+
+\begin_layout Standard
+The autonomously generated object feature database is created by having
+ the robot perform the previously described algorithm while moving the object
+ in a linear motion.
+ This process is performed in a cluttered scene, with no background motion.
+ 29 snapshots are performed per object per trial.
+ The object features from each snapshot are inserted into a database, which
+ is then used to match object features in nine different scene images containing
+ that object.
+ Each of these images has a manually generated ground truth feature classificati
+on, determining which of the features in the image are object features and
+ which are background or arm features.
+ The number of object features successfully detected as a fraction of all
+ object features in the image is recorded.
+ The number of falsely classified object features is also recorded.
+ This is done for ten different objects, the performance of the database
+ is recorded relative to the number of snapshots that comprise the database.
+ This is done to evaluate the change in matching accuracy as more snapshots
+ are added to the database.
+\end_layout
+
+\begin_layout Standard
+The manually segmented training views of each object, with six image snapshots
+ per object, are used to build a baseline feature database to compare against.
+ For each object, features are extracted from the training images and inserted
+ into the baseline database.
+ This is then used to perform object feature matching in the same way as
+ described for the autonomously generated database above.
+ For each database, features are matched using Lowe's nearest-neighbour
+ approach 
+\begin_inset CommandInset citation
+LatexCommand cite
+key "3_lowe_sift_object_recognition"
+
+\end_inset
+
+, with the second nearest neighbour database feature providing the threshold
+ for rejecting spurious feature matches.
+\end_layout
+
+\begin_layout Standard
+The matching performance results of the two databases are shown in Figure
+ 
+\begin_inset CommandInset ref
+LatexCommand ref
+reference "fig:Performance-of-object"
+
+\end_inset
+
+.
+ After the 29 autonomously generated snapshots (for each object) are added
+ to the database, it is capable of recognising 71% of an object's features
+ in the test scene images.
+ The baseline database, created from six manually segmented training images
+ of the object, is able to detect 62% of object features.
+ The number of false positives of the two databases is 6% and 4% respectively.
+ These results show that the presented feature segmentation method is effective
+ at generating an object feature database that can be used to match object
+ features in a scene image.
+\end_layout
+
+\begin_layout Standard
+\begin_inset Float figure
+wide false
+sideways false
+status open
+
+\begin_layout Plain Layout
+\align center
+\begin_inset Graphics
+	filename images/Rplots.png
+	width 80text%
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Plain Layout
+\begin_inset Caption
+
+\begin_layout Plain Layout
+\begin_inset Argument
+status open
+
+\begin_layout Plain Layout
+Object feature segmentation performance results.
+\end_layout
+
+\end_inset
+
+The fraction of object features, detected by an autonomously generated object
+ feature database, compared to that of a feature database generated from
+ manually labelled training images.
+ The manually labelled database is generated from six segmented training
+ images of each test object.
+ The performance of the autonomously generated database is plotted in relation
+ to the number of snapshots used to build the database.
+ The error bars indicate the Standard Error across the different evaluation
+ iterations.
+\begin_inset CommandInset label
+LatexCommand label
+name "fig:Performance-of-object"
+
+\end_inset
+
+
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+The performance of this algorithm is comparable to using manually segmented
+ views of an object, with the advantage that it allows a robot to learn
+ a new object autonomously in a complex and dynamic environment.
+\end_layout
+
+\begin_layout Section
+Discussion
+\begin_inset CommandInset label
+LatexCommand label
+name "sec:Discussion-2"
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+We have presented an effective algorithm for active learning of object SIFT
+ features on an autonomous robot platform, using motion based feature segmentati
+on.
+ Stable image features localised in 3D world space, combined with motion,
+ provide sufficient data to perform effective object feature segmentation
+ from background features in the presence of background motion and clutter.
+\end_layout
+
+\begin_layout Standard
+One of the caveats of the algorithm is the way the target object is moved
+ through the scene.
+ The motion the robot performs while holding the object is chosen to be
+ a translation, allowing one particular aspect of the object's appearance
+ to be learned.
+ The linear motion is required to build up trajectory information about
+ each feature, by tracking it over a sufficient period of time.
+ If features of multiple aspects of the object need to be learned, then
+ a combination of rotation and translation motion must be used.
+ Ideally the robot should rotate the object in place so as to view the object
+ from all sides, allowing multiple aspects to be learned.
+ However, we found that tracking features becomes a problem under rotation
+ (pitch or yaw relative to the camera), only being able to track features
+ through approximately 
+\begin_inset Formula $15\textdegree$
+\end_inset
+
+ of rotation out of the camera plane.
+ This is because under such rotation the pixel neighbourhood around a feature
+ point changes, compared to the original.
+ This reduces the trajectory information per feature as compared to translation
+ motion, making the separation of foreground object and arm features from
+ background features unreliable.
+ Furthermore, background motion filtering based on arm feature trajectories
+ becomes ineffective due to their short length.
+ As a result, to learn the features of an object from multiple viewpoints,
+ we fall back to performing multiple translation motions with a gradual
+ rotation of the robot wrist joint.
+ This allows a  feature to be tracked for a sufficient period of time, while
+ still viewing multiple aspects of the object.
+ This is further elaborated on in Chapter 5.
+\end_layout
+
+\begin_layout Standard
+The feature recognition results presented in Figure 
+\begin_inset CommandInset ref
+LatexCommand ref
+reference "fig:Performance-of-object"
+
+\end_inset
+
+ raise the question of why the percentage of detected object features does
+ not approach 
+\begin_inset Formula $100\%$
+\end_inset
+
+ as more snapshot features are added to the database.
+ The main reason for this is pixels from the background influencing the
+ learned object SIFT features.
+ SIFT features are based on a pixel neighbourhood of a certain size, depending
+ on the scale of the feature.
+ Features near the edges of an object and with large pixel neighbourhoods
+ will have background pixels contributing to the description vector.
+ As a result, when learning the features of an object while it is held by
+ the robot arm, some of the learned features that have a large scale or
+ are close to the object edge will not be recognisable later when the object
+ is placed in a scene.
+ This is because the background pixels will change, which will also change
+ the SIFT feature's description vector.
+ The phenomenon of background pixels influencing an object's SIFT feature
+ is illustrated in Figure 
+\begin_inset CommandInset ref
+LatexCommand ref
+reference "fig:sift-background-bleed"
+
+\end_inset
+
+.
+ To support this hypothesis, when performing object recognition, we record
+ for each object feature its distance from the object image region and its
+ scale.
+ These data are plotted in Figure 
+\begin_inset CommandInset ref
+LatexCommand ref
+reference "fig:Plot-of-detected"
+
+\end_inset
+
+ for object features successfully matched by the database, and for object
+ features which were not matched.
+ It can be seen that, as the distance from the object region's edge decreases
+ and the feature scale increases, the number of undetected features grows,
+ supporting our hypothesis.
+\end_layout
+
+\begin_layout Standard
+\begin_inset Float figure
+wide false
+sideways false
+status open
+
+\begin_layout Plain Layout
+\align center
+\begin_inset Graphics
+	filename images/background_bleed.png
+	width 70text%
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Plain Layout
+\begin_inset Caption
+
+\begin_layout Plain Layout
+\begin_inset Argument
+status open
+
+\begin_layout Plain Layout
+Effect of background image regions on object SIFT features.
+\end_layout
+
+\end_inset
+
+This diagram demonstrates how a SIFT feature located inside the object image
+ region (green) can be dependent on the background (grey), affecting the
+ resultant description vector and orientation direction.
+ This makes reliable matching of some object features impossible since the
+ background may be different compared to when the feature was learned.
+\begin_inset CommandInset label
+LatexCommand label
+name "fig:sift-background-bleed"
+
+\end_inset
+
+
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+\begin_inset Float figure
+wide false
+sideways false
+status open
+
+\begin_layout Plain Layout
+\align center
+\begin_inset Graphics
+	filename images/scale.png
+	width 70text%
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Plain Layout
+\begin_inset Caption
+
+\begin_layout Plain Layout
+\begin_inset Argument
+status open
+
+\begin_layout Plain Layout
+Edge distance and scale of undetected object features.
+\end_layout
+
+\end_inset
+
+Plot of detected and undetected features given their pixel distance from
+ the object edge and the feature scale.
+ The border distance is the number of pixels to the nearest non-object pixel
+ from the SIFT feature, the feature scale determines the size of the neighbourho
+od used to compute the SIFT description vector.
+\begin_inset CommandInset label
+LatexCommand label
+name "fig:Plot-of-detected"
+
+\end_inset
+
+
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Section
+Future Work
+\begin_inset CommandInset label
+LatexCommand label
+name "sec:Future-Work-2"
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+There are several possible avenues for future work to build upon the general
+ approach presented in this chapter.
+ First, our implementation of the feature tracking and segmentation method
+ is based on SIFT features.
+ However, there is a wide variety of other local image descriptors (SURF
+ 
+\begin_inset CommandInset citation
+LatexCommand cite
+key "3_Bay_surf"
+
+\end_inset
+
+, PCA-SIFT 
+\begin_inset CommandInset citation
+LatexCommand cite
+key "3_Yan_pcasift"
+
+\end_inset
+
+) which may be used instead of, or in addition to, SIFT.
+ Second, the feature trajectory tracking aspect of our implementation can
+ be improved by combining the expected direction of arm movement (extracted
+ from the arm kinematics) and Bayesian tracking 
+\begin_inset CommandInset citation
+LatexCommand cite
+key "4_bayesian_tracking1"
+
+\end_inset
+
+ 
+\begin_inset CommandInset citation
+LatexCommand cite
+key "4_bayesian_tracking2"
+
+\end_inset
+
+ of features.
+ Third, if a detailed 3D model of the robot gripper and arm can be built
+ autonomously, it may be used to better filter out arm features from snapshots.
+\end_layout
+
+\begin_layout Standard
+This chapter has presented a method of learning the features of one aspect
+ of an object, that is, only a single perspective of the object.
+ However, for object recognition and localisation, the full aspect graph
+ should be learned to be able to recognise the object in a scene from all
+ viewing directions.
+ Furthermore, as each object 
+\emph on
+Stereo Feature
+\emph default
+ has a 3D world position, if multiple aspects are learned then they may
+ be joined to form a single coherent 3D point cloud of the object.
+ This can be used to determine the overall shape of the object, which is
+ useful for grasping and manipulation planning.
+ This is presented in the next Chapter.
+\end_layout
+
+\end_body
+\end_document

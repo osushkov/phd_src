@@ -1,0 +1,50 @@
+import sys
+import os
+
+### Stuff you might want to change ###
+
+LIBRARY_SOURCES = [
+    'src/Settings.cpp',
+    'src/Graphics/GraphicsBase.cpp',
+    'src/Graphics/TextureManager.cpp',
+]
+
+BINARY_SOURCES = ['src/main.cpp']
+
+DIST_SOURCES = LIBRARY_SOURCES + [
+    'src/Settings.h',
+    'src/Graphics/GraphicsBase.h',
+    'src/Graphics/TextureManager.h',
+]
+
+LIBS = ['GL', 'GLU', 'glut', 'SDL_image', 'boost_thread-mt', 'pthread']
+
+release_flags = '-Wall -D_REENTRANT -O3'
+debug_flags = '-Wall -D_REENTRANT -g -DDEBUG '
+if sys.platform == 'darwin': 
+    link_flags = '-L/System/Library/Frameworks/OpenGL.framework/Versions/A/Libraries/'
+else: 
+    link_flags = ''
+sdl_flags = os.popen("sdl-config --libs").read()
+sdl_flags = sdl_flags.rstrip()
+
+### Stuff you probably don't need to change ###
+
+env = Environment()
+
+mode = ARGUMENTS.get('mode', 'debug')
+if mode == 'debug':
+    env.Append(CXXFLAGS = debug_flags)
+elif mode == 'release':
+    env.Append(CXXFLAGS = release_flags)
+else:
+    print "Unknown mode '%s%', use debug (default) or release" % mode
+    sys.exit(1)
+
+### compilation rules
+library_objects = [ env.Object(s, CXX = 'g++') for s in LIBRARY_SOURCES]
+binary_objects = [ env.Object(s, CXX = 'g++') for s in BINARY_SOURCES]
+
+stereo_vis = env.Program('stereo_vis', library_objects + binary_objects,
+                        CXX = 'g++', LINKFLAGS = " ".join([sdl_flags, link_flags]), LIBS = LIBS)
+

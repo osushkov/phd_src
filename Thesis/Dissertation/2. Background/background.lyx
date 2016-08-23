@@ -1,0 +1,3465 @@
+#LyX 2.0 created this file. For more info see http://www.lyx.org/
+\lyxformat 413
+\begin_document
+\begin_header
+\textclass report
+\use_default_options true
+\master ../main.lyx
+\maintain_unincluded_children false
+\language english
+\language_package default
+\inputencoding auto
+\fontencoding global
+\font_roman default
+\font_sans default
+\font_typewriter default
+\font_default_family default
+\use_non_tex_fonts false
+\font_sc false
+\font_osf false
+\font_sf_scale 100
+\font_tt_scale 100
+
+\graphics default
+\default_output_format default
+\output_sync 0
+\bibtex_command default
+\index_command default
+\paperfontsize default
+\spacing single
+\use_hyperref false
+\papersize default
+\use_geometry false
+\use_amsmath 1
+\use_esint 1
+\use_mhchem 1
+\use_mathdots 1
+\cite_engine basic
+\use_bibtopic false
+\use_indices false
+\paperorientation portrait
+\suppress_date false
+\use_refstyle 1
+\index Index
+\shortcut idx
+\color #008000
+\end_index
+\secnumdepth 3
+\tocdepth 3
+\paragraph_separation indent
+\paragraph_indentation default
+\quotes_language english
+\papercolumns 1
+\papersides 1
+\paperpagestyle default
+\tracking_changes false
+\output_changes false
+\html_math_output 0
+\html_css_as_file 0
+\html_be_strict false
+\end_header
+
+\begin_body
+
+\begin_layout Standard
+\begin_inset Newpage cleardoublepage
+\end_inset
+
+
+\end_layout
+
+\begin_layout Chapter
+Background
+\end_layout
+
+\begin_layout Standard
+This thesis investigates the primary skills an autonomous robot needs to
+ interact with and use objects in its environment.
+ These skills include: learning the appearance of a novel object, recognising
+ and tracking the object in a cluttered scene, reconstructing the 3D shape
+ of the object, and learning the physical properties of the object to accomplish
+ a task.
+ In this chapter, we discuss the background and existing literature in each
+ of these areas.
+ We present related work and the strengths and weaknesses of the existing
+ approaches, followed by an outline of how these weaknesses are addressed
+ in the following chapters.
+\end_layout
+
+\begin_layout Section
+Object Perception
+\begin_inset CommandInset label
+LatexCommand label
+name "sec:Object-Perception"
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+Object recognition and localisation is a key aspect of any robot system
+ that needs to interact with objects in an unstructured environment.
+ Many different sensor modalities have been used for robot object recognition.
+ Haptic feedback (touch) has been used to determine the shape of an object
+ from sparse surface contact points that are then used to match the shape
+ of known objects 
+\begin_inset CommandInset citation
+LatexCommand cite
+key "3_haptic_object_recognition"
+
+\end_inset
+
+.
+ Scene range data from a time-of-flight sensor, such as a laser range scanner,
+ can also be used to recognise and localise objects in a scene by matching
+ known shapes 
+\begin_inset CommandInset citation
+LatexCommand cite
+key "3_range_object_recognition"
+
+\end_inset
+
+.
+ Magnetic markers 
+\begin_inset CommandInset citation
+LatexCommand cite
+key "3_magnetic_object_recognition"
+
+\end_inset
+
+ and acoustic signatures 
+\begin_inset CommandInset citation
+LatexCommand cite
+key "3_acoustic_object_recognition"
+
+\end_inset
+
+ are further examples of the wide range of sensors and modalities that have
+ been applied to object tracking and recognition.
+ However, the most common sensor modality for object recognition and localisatio
+n is vision.
+\end_layout
+
+\begin_layout Standard
+Video cameras are popular sensors because of their low cost, high resolution,
+ and the large amount of scene data contained in the camera image stream.
+ The output of most cameras is a stream of images, where each image is a
+ two dimensional array of pixels.
+ This data can then be used for recognising and localising an object in
+ the scene by examining the pixel values of the camera images.
+ 
+\end_layout
+
+\begin_layout Standard
+There has been a large amount of research in computer vision addressing
+ the problem of object recognition and localisation, applying a variety
+ of techniques 
+\begin_inset CommandInset citation
+LatexCommand cite
+key "4_computer_vision"
+
+\end_inset
+
+ 
+\begin_inset CommandInset citation
+LatexCommand cite
+key "4_computer_vision2"
+
+\end_inset
+
+.
+ We present an overview of the different approaches that have been used
+ for object recognition and localisation in computer vision, going into
+ detail for the more relevant research literature.
+\end_layout
+
+\begin_layout Standard
+In general, the development of object recognition algorithms has been driven
+ by the need to address two main problems.
+ First, the appearance of an object in a scene image may be different from
+ its appearance during training.
+ This can be due to changed lighting conditions, partial occlusion of the
+ object and viewing the object from a different perspective.
+ The second problem is background clutter.
+ The scene image may contain background regions that appear similar to the
+ target object.
+ This can make accurate object recognition and localisation difficult.
+\end_layout
+
+\begin_layout Subsection
+Model Based Recognition
+\end_layout
+
+\begin_layout Standard
+3D model based recognition relies on an existing 3D representation of an
+ object to recognise and localise it.
+ A typical representation is a 3D Computer Aided Design (CAD) model that
+ defines the faces and edges of the object.
+ Edges 
+\begin_inset CommandInset citation
+LatexCommand cite
+key "3_canny"
+
+\end_inset
+
+ and contours extracted from an image can be matched against the CAD data
+ to determine the object's pose in the scene 
+\begin_inset CommandInset citation
+LatexCommand cite
+key "3_model_tracking"
+
+\end_inset
+
+.
+ However, one of the problems with this approach is finding the initial
+ correspondence between scene edges and the object's shape.
+ A simple solution is to initialise the scene object in a particular orientation
+ 
+\begin_inset CommandInset citation
+LatexCommand cite
+key "3_model_tracking"
+
+\end_inset
+
+, but this is not suitable when the object's pose is unknown.
+ An improved approach is to match locally distinct image regions to determine
+ the initial correspondence between the object model and the scene 
+\begin_inset CommandInset citation
+LatexCommand cite
+key "3_model_tracking_with_features"
+
+\end_inset
+
+.
+\end_layout
+
+\begin_layout Standard
+Despite being able to accurately track the pose of an object, model based
+ object tracking has several drawbacks.
+ An accurate 3D CAD model of the object is required, which may be difficult
+ and time consuming to obtain.
+ Additionally, the objects must have well defined contours and edges for
+ optimal performance.
+ Objects with complex patterns and textures may not be suitable for recognition
+ and tracking using this approach.
+\end_layout
+
+\begin_layout Subsection
+Appearance Based Recognition
+\begin_inset CommandInset label
+LatexCommand label
+name "sub:Appearance-Based-Recognition"
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+In contrast to model-based recognition, appearance-based methods store a
+ representation of the object's visual appearance and features from different
+ points of view.
+ The stored representation is then matched against a scene image to recognise
+ the object in the environment.
+ The different appearance based approaches are characterised by how the
+ object's appearance features are represented and how this model is matched
+ to the scene image.
+ We can divide these into two classes: methods using global image features;
+ and methods using local image features.
+\end_layout
+
+\begin_layout Subsubsection*
+Global Image Features
+\end_layout
+
+\begin_layout Standard
+Global image features are functions of either the entire image, or a large
+ part of it.
+ Global features can be used to form a very compact representation of an
+ image as a vector in a high dimensional space.
+ 
+\end_layout
+
+\begin_layout Standard
+Colour and colour histograms are useful global features for object perception.
+ If the object has a relatively uniform colour, distinct from the background,
+ object recognition and localisation can be performed by labelling as object
+ pixels if they match a predefined colour-space region 
+\begin_inset CommandInset citation
+LatexCommand cite
+key "3_robocup_color"
+
+\end_inset
+
+.
+ Object pixel regions determine the location of the target object in the
+ image.
+ Alternatively, an object view can be characterised by it's colour histogram.
+ A histogram is a representation of the frequency that each colour occurs
+ in an image.
+ This can be used to classify the content of an image 
+\begin_inset CommandInset citation
+LatexCommand cite
+key "3_svm_classification"
+
+\end_inset
+
+, but also for object detection and localisation.
+ If we calculate the colour histogram of an object's appearance using training
+ images, we can find the image regions that have a similar colour to the
+ object by back projecting the object's histogram onto the scene image 
+\begin_inset CommandInset citation
+LatexCommand cite
+key "3_color_indexing"
+
+\end_inset
+
+.
+ An example of this is shown in Figure 
+\begin_inset CommandInset ref
+LatexCommand ref
+reference "fig:colour_histogram"
+
+\end_inset
+
+.
+\end_layout
+
+\begin_layout Standard
+\begin_inset Float figure
+wide false
+sideways false
+status collapsed
+
+\begin_layout Plain Layout
+\align center
+\begin_inset Graphics
+	filename images/backproj.png
+	width 80text%
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Plain Layout
+\begin_inset Caption
+
+\begin_layout Plain Layout
+\begin_inset Argument
+status open
+
+\begin_layout Plain Layout
+Object recognition using histogram back-projection.
+\end_layout
+
+\end_inset
+
+For colour histogram object detection, a training object image (top left)
+ is used to generate a representative colour histogram (top right).
+ This is then used to label the pixels in the scene image (bottom right),
+ highlighting pixels that have a high probability of belonging to the target
+ object (bottom left).
+ (Images courtesy of 
+\begin_inset CommandInset citation
+LatexCommand cite
+key "3_colour_histogram_image"
+
+\end_inset
+
+)
+\begin_inset CommandInset label
+LatexCommand label
+name "fig:colour_histogram"
+
+\end_inset
+
+
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Plain Layout
+
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+This approach can work well if the object's colours are distinct from the
+ background.
+ It is also able to handle rotation and scale changes, as a histogram is
+ invariant to such image transforms.
+ However, if the background image regions contain similar colours to the
+ target object, this approach will fail.
+ A more robust approach is to combine colour with other image features such
+ as shape 
+\begin_inset CommandInset citation
+LatexCommand cite
+key "3_color_and_shape"
+
+\end_inset
+
+.
+\end_layout
+
+\begin_layout Standard
+Shape based approaches to object recognition use the contour or silhouette
+ of an object to create a description vector.
+ This description vector can include shape metrics such as area, eccentricity,
+ etc 
+\begin_inset CommandInset citation
+LatexCommand cite
+key "3_shape_representation"
+
+\end_inset
+
+.
+ However, improved object discrimination has been achieved by using shape
+ context features 
+\begin_inset CommandInset citation
+LatexCommand cite
+key "3_shape_context"
+
+\end_inset
+
+.
+ These features are formed by taking points along the contour of an object
+ (which can be found using edge detection 
+\begin_inset CommandInset citation
+LatexCommand cite
+key "3_canny"
+
+\end_inset
+
+) and drawing vectors out to other points along the contour.
+ The length and direction of the vectors form the shape context description
+ of the object (see Figure 
+\begin_inset CommandInset ref
+LatexCommand ref
+reference "fig:A-shape-context"
+
+\end_inset
+
+).
+ To match shapes, a minimum error mapping is found between the points comprising
+ the shape contexts of a learned model and the scene image, where each point
+ is characterised by its vectors.
+ This approach is effective for objects with well defined shapes and silhouettes.
+ However, as background clutter and partial object occlusion is introduced,
+ this method becomes less accurate.
+\end_layout
+
+\begin_layout Standard
+\begin_inset Float figure
+wide false
+sideways false
+status open
+
+\begin_layout Plain Layout
+\align center
+\begin_inset Graphics
+	filename images/shape_context.png
+	width 60text%
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Plain Layout
+\begin_inset Caption
+
+\begin_layout Plain Layout
+\begin_inset Argument
+status open
+
+\begin_layout Plain Layout
+Shape context description vectors.
+\end_layout
+
+\end_inset
+
+A shape context description vector is formed for an object (a) by taking
+ its silhouette (b) and drawing vectors out from points along the contour
+ to other points on the contour (c).
+ The result for a point 
+\emph on
+p
+\emph default
+ can be represented as a log-polar histogram (d).
+ The shape context of the entire object is a vector of the histograms of
+ the points along the contour.
+ (Image courtesy of 
+\begin_inset CommandInset citation
+LatexCommand cite
+key "3_shape_representation"
+
+\end_inset
+
+)
+\begin_inset CommandInset label
+LatexCommand label
+name "fig:A-shape-context"
+
+\end_inset
+
+
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Plain Layout
+
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+Template matching 
+\begin_inset CommandInset citation
+LatexCommand cite
+key "3_visual_template_matching"
+
+\end_inset
+
+ is another approach to object recognition.
+ The simplest variant is to store the object's appearance as the raw pixel
+ values of a snapshot from a particular point of view.
+ To detect and localise the object in the scene, the stored snapshot pixel
+ values are directly compared to the scene image.
+ This method, however, does not cope well with changes in perspective and
+ lighting, as well as partial occlusions.
+ We can improve upon raw pixel intensity template matching by using Principal
+ Component Analysis 
+\begin_inset CommandInset citation
+LatexCommand cite
+key "3_PCA"
+
+\end_inset
+
+ (PCA) to reduce dimensionality.
+ PCA performs eigen-decomposition to find the similarities and differences
+ in the template pixel data across many different sample views of the object.
+ This allows the most statistically significant and invariant to noise pixel
+ components of the templates to be stored and allows matching to be performed
+ on scene images in which the object may have a slightly different appearance
+ as compared to the training data (due to lighting and perspective changes,
+ noise, etc).
+ This approach has been successfully used to perform very fast object recognitio
+n of a set of 100 objects 
+\begin_inset CommandInset citation
+LatexCommand cite
+key "3_real_time_recognition"
+
+\end_inset
+
+.
+ It has also been applied to facial recognition tasks 
+\begin_inset CommandInset citation
+LatexCommand cite
+key "3_pca_face_recognition"
+
+\end_inset
+
+.
+ 
+\end_layout
+
+\begin_layout Standard
+Many other global feature approaches to object perception have been studied.
+ However, despite benefits such as matching and classification speed, object
+ recognition techniques based on global image features have several weaknesses.
+ For scenes where the target object is partially occluded, or scenes with
+ a lot of background clutter, global image feature techniques can struggle.
+ Techniques such as PCA templates can also require a large amount of training
+ data to build a reliable statistical model of the object's appearance under
+ different lighting conditions.
+\end_layout
+
+\begin_layout Subsubsection*
+Local Image Features
+\end_layout
+
+\begin_layout Standard
+In contrast to global image features, local image features refer to small
+ image patches.
+ There are typically very many local image features that comprise an image.
+ Each local image feature can be characterised by its position in the image
+ and in some cases a vector that describes some aspects of the neighbourhood
+ of pixels around the feature.
+ Object recognition and localisation is performed by matching the local
+ image features extracted from training images of the object to the scene
+ image features.
+\end_layout
+
+\begin_layout Standard
+An example of a simple local image feature is a corner.
+ A corner is defined as a region with two dominant edge gradient directions.
+ The Harris corner detector 
+\begin_inset CommandInset citation
+LatexCommand cite
+key "3_harris_corner"
+
+\end_inset
+
+ is an efficient algorithm for extracting corner local image features from
+ an image.
+ However, there are several factors that make it unsuitable for object recogniti
+on.
+ First, each corner is characterised only by its position, making matching
+ corners between a learned object appearance model and a scene image difficult.
+ Second, corners are not scale invariant.
+ Part of an object may appear as a corner at one scale, but not at another.
+ These shortcomings are addressed by interest point detectors.
+\end_layout
+
+\begin_layout Standard
+An interest point detector searches an image for stable points of interest,
+ and generates a description vector that encapsulates the structure of the
+ image in a neighbourhood around the point.
+ Interest points can typically be characterised as having a well defined
+ position in an image, are stable and reproducible under different lighting
+ conditions, rotations, and small perspective changes.
+ 
+\end_layout
+
+\begin_layout Standard
+There are numerous local image detector algorithms 
+\begin_inset CommandInset citation
+LatexCommand cite
+key "3_local_detector_survey"
+
+\end_inset
+
+ 
+\begin_inset CommandInset citation
+LatexCommand cite
+key "3_Schmid_perfeval"
+
+\end_inset
+
+ 
+\begin_inset CommandInset citation
+LatexCommand cite
+key "3_Schmid_evaluation"
+
+\end_inset
+
+, each with their own strengths and weaknesses.
+ We will give a detailed overview of the Scale Invariant Feature Transform
+ (SIFT) algorithm 
+\begin_inset CommandInset citation
+LatexCommand cite
+key "3_Lowe_sift"
+
+\end_inset
+
+ 
+\begin_inset CommandInset citation
+LatexCommand cite
+key "3_lowe_sift_object_recognition"
+
+\end_inset
+
+ as it is one of the most popular interest point detectors for object recognitio
+n and localisation in cluttered and complex scenes.
+\end_layout
+
+\begin_layout Paragraph*
+SIFT Algorithm
+\end_layout
+
+\begin_layout Standard
+The Scale Invariant Feature Transform (SIFT) is a local image descriptor
+ developed by Lowe 
+\begin_inset CommandInset citation
+LatexCommand cite
+key "3_lowe_sift_object_recognition"
+
+\end_inset
+
+.
+ It combines the detection of stable local interest points at multiple image
+ scales with a rotation and scale invariant descriptor that describes the
+ neighbourhood around each interest point.
+ The SIFT algorithm can output many features for an image, depending on
+ its content.
+ Object recognition and localisation is performed by matching SIFT features
+ from reference images of the target object to the scene image features.
+\end_layout
+
+\begin_layout Standard
+SIFT features have been used for 3D object recognition and pose localisation
+ for robot manipulation 
+\begin_inset CommandInset citation
+LatexCommand cite
+key "3_full_pose_registration"
+
+\end_inset
+
+ 
+\begin_inset CommandInset citation
+LatexCommand cite
+key "3_sift_pose"
+
+\end_inset
+
+, localisation 
+\begin_inset CommandInset citation
+LatexCommand cite
+key "3_sift_localisation"
+
+\end_inset
+
+ and stereo correspondence matching 
+\begin_inset CommandInset citation
+LatexCommand cite
+key "3_sift_stereo_localisation"
+
+\end_inset
+
+.
+ It is a popular approach for object recognition because it is able to successfu
+lly deal with scene clutter, partial object occlusion, lighting and perspective
+ changes, and is rotation and scale invariant.
+ However, one of the weaknesses of SIFT and other similar features, is that
+ it does not handle plain untextured objects well.
+ SIFT features are generated in areas of high texture, around edges and
+ corners.
+ A plain object may generate very few or no features at all, making object
+ recognition impossible using this method.
+ Figure 
+\begin_inset CommandInset ref
+LatexCommand ref
+reference "fig:sift_clutter_recognition"
+
+\end_inset
+
+ demonstrates object recognition using SIFT features in a cluttered environment.
+\end_layout
+
+\begin_layout Standard
+\begin_inset Float figure
+wide false
+sideways false
+status open
+
+\begin_layout Plain Layout
+\align center
+\begin_inset Graphics
+	filename images/sift_recognition.jpg
+	width 80text%
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Plain Layout
+\begin_inset Caption
+
+\begin_layout Plain Layout
+\begin_inset Argument
+status open
+
+\begin_layout Plain Layout
+Object recognition using SIFT features.
+\end_layout
+
+\end_inset
+
+SIFT features can be used to effectively recognise and localise objects
+ in highly cluttered and complex scenes.
+ (Images courtesy of 
+\begin_inset CommandInset citation
+LatexCommand cite
+key "3_lowe_sift_object_recognition"
+
+\end_inset
+
+)
+\begin_inset CommandInset label
+LatexCommand label
+name "fig:sift_clutter_recognition"
+
+\end_inset
+
+
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+The SIFT algorithm can be broken down into several steps.
+ These steps first detect and localise stable interest points in an image,
+ and then generate a description of the pixel neighbourhood around each
+ interest point.
+ The SIFT extraction process for an image is as follows:
+\end_layout
+
+\begin_layout Enumerate
+
+\series bold
+Generate a Scale-Space pyramid.
+
+\series default
+ SIFT finds features at all image scales.
+ To do this, a scale-space pyramid is built by repeatedly convolving the
+ original image with a Gaussian kernel.
+ 
+\end_layout
+
+\begin_layout Enumerate
+
+\series bold
+Build a Difference of Gaussians pyramid.
+
+\series default
+ The Difference of Gaussians is an approximation of the Laplacian function
+ high-pass filter on the image 
+\begin_inset CommandInset citation
+LatexCommand cite
+key "3_theory_of_edge_detection"
+
+\end_inset
+
+.
+ This is computed by taking the difference of adjacent pairs of images from
+ the scale-space pyramid.
+\end_layout
+
+\begin_layout Enumerate
+
+\series bold
+Find the extrema points in the Difference of Gaussians pyramid.
+
+\series default
+ Each point in the Difference of Gaussians pyramid has 26 neighbours, eight
+ on the same scale and nine each in the above and below scale.
+ The points that are the minimum or maximum of their 26 neighbours are the
+ extrema points.
+\end_layout
+
+\begin_layout Enumerate
+
+\series bold
+Rejection of unstable extrema points.
+
+\series default
+ Points with a low absolute value in the Difference of Gaussians pyramid
+ or points that are too 
+\emph on
+edge-like
+\emph default
+ are considered to have poor repeatability and unstable image locations
+ in the presence of noise.
+\end_layout
+
+\begin_layout Enumerate
+
+\series bold
+Orientation assignment.
+
+\series default
+ Each of the remaining key-points is assigned a principal orientation.
+ This is the most prominent gradient direction of a small neighbourhood
+ of pixels around the interest point.
+\end_layout
+
+\begin_layout Enumerate
+
+\series bold
+Generation of key-point description vectors.
+
+\series default
+ For each key-point, a neighbourhood of pixels is used to build a normalised
+ array of histograms of gradients.
+ The final result is a 128-dimensional description vector for each key-point.
+\end_layout
+
+\begin_layout Standard
+The final result of extracting SIFT features from an image is a set of features.
+ Each feature is characterised by the following data: an 
+\begin_inset Formula $(x,y)$
+\end_inset
+
+ sub-pixel image coordinate, an orientation vector describing the direction
+ of the principal gradient, a scale, and a 128-dimensional description vector
+ describing the image neighbourhood around the feature point.
+ Figure 
+\begin_inset CommandInset ref
+LatexCommand ref
+reference "fig:sift_house"
+
+\end_inset
+
+ shows the resulting extracted SIFT features on a sample scene image.
+\end_layout
+
+\begin_layout Standard
+\begin_inset Float figure
+wide false
+sideways false
+status open
+
+\begin_layout Plain Layout
+\align center
+\begin_inset Graphics
+	filename images/sift_features.jpg
+	width 60text%
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Plain Layout
+\begin_inset Caption
+
+\begin_layout Plain Layout
+\begin_inset Argument
+status open
+
+\begin_layout Plain Layout
+SIFT feature extraction.
+\end_layout
+
+\end_inset
+
+The SIFT features (right) generated for an image of a house (left).
+ Each feature is represented by an arrow.
+ The length of the arrow represents the scale of the feature, the direction
+ represents the feature's orientation.
+ (Image courtesy of 
+\begin_inset CommandInset citation
+LatexCommand cite
+key "3_Lowe_sift"
+
+\end_inset
+
+)
+\begin_inset CommandInset label
+LatexCommand label
+name "fig:sift_house"
+
+\end_inset
+
+
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+Object recognition is performed by matching SIFT features from a stored
+ database of features (extracted from sample image views of the object)
+ to the scene image features.
+ This is done by individually matching each scene image feature to the nearest
+ neighbour object database feature, based on the 128-dimensional description
+ vector.
+ Spurious matches are rejected by examining the ratio of the distance to
+ the nearest neighbour and the distance to the second-nearest neighbour.
+ If this ratio is above a certain threshold then the match is considered
+ spurious and is rejected 
+\begin_inset CommandInset citation
+LatexCommand cite
+key "3_Lowe_sift"
+
+\end_inset
+
+.
+ This is done because some SIFT features are more discriminatory than others.
+ The ratio of the nearest and second-nearest match distances approximates
+ how discriminatory the feature is.
+\end_layout
+
+\begin_layout Standard
+The next step is to determine which of the feature matches is geometrically
+ consistent and find the transform from database feature positions to correspond
+ing scene feature positions.
+ Two common methods for doing this are the Hough transform 
+\begin_inset CommandInset citation
+LatexCommand cite
+key "3_Duda_hough"
+
+\end_inset
+
+ and RANSAC 
+\begin_inset CommandInset citation
+LatexCommand cite
+key "3_Fischler_ransac"
+
+\end_inset
+
+.
+ These methods find a subset of database object features and their matching
+ scene image features that are related by a common geometric transform.
+ The remaining inconsistent features are rejected as spurious matches.
+ The geometric transform defines the position and orientation of the target
+ object in the scene image.
+ The SIFT feature matching process is described in further detail in Chapter
+ 3.
+\end_layout
+
+\begin_layout Standard
+One of the main challenges of this approach is efficiently performing feature
+ matching between the scene and database features.
+ Nearest neighbour matching in a low dimensional space can be performed
+ efficiently using a k-d tree 
+\begin_inset CommandInset citation
+LatexCommand cite
+key "3_Friedman_kdtree"
+
+\end_inset
+
+.
+ However, SIFT descriptors are 128-dimensional, and as a result of the high
+ dimensionality of the search space k-d trees perform poorly.
+ An alternate approach is to use an approximate nearest-neighbour matching
+ method using the best-bin-first modification of the k-d tree search 
+\begin_inset CommandInset citation
+LatexCommand cite
+key "3_Lowe_approxnn"
+
+\end_inset
+
+ to significantly speed up feature matching.
+ 
+\end_layout
+
+\begin_layout Standard
+There has been some work in improving SIFT.
+ One of the weaknesses of SIFT is that it does not take colour into account,
+ as the base algorithm deals with grey-scale image.
+ CSIFT 
+\begin_inset CommandInset citation
+LatexCommand cite
+key "3_csift"
+
+\end_inset
+
+ is an extension of SIFT that takes colour into account in the feature descripti
+on vector.
+ PCA-SIFT 
+\begin_inset CommandInset citation
+LatexCommand cite
+key "3_Yan_pcasift"
+
+\end_inset
+
+ is another variant, applying PCA on the 128-dimensional description vector
+ of each feature to reduce its dimensionality.
+ In some cases this can improve the feature matching accuracy and speed.
+ Another related interest point detector is SURF 
+\begin_inset CommandInset citation
+LatexCommand cite
+key "3_Bay_surf"
+
+\end_inset
+
+, providing much faster image feature extraction performance as compared
+ to SIFT, improved performance under lighting changes, but poorer repeatability
+ under object transformation 
+\begin_inset CommandInset citation
+LatexCommand cite
+key "3_sift_vs_surf"
+
+\end_inset
+
+.
+\end_layout
+
+\begin_layout Subsection*
+Improvements
+\end_layout
+
+\begin_layout Standard
+Chapter 3 presents an improved method for matching learned object SIFT features
+ to scene image features for object recognition and localisation.
+ This work was published at the 2010 International Conference on Control,
+ Automation, Robotics and Vision (ICARCV) 
+\begin_inset CommandInset citation
+LatexCommand cite
+key "sushkov_local_feature_matching"
+
+\end_inset
+
+.
+ We improve on the existing nearest neighbour method by taking into account
+ the geometric consistency of matched features concurrently with their descripti
+on vector similarity.
+ This is in contrast to the existing method where features are first matched
+ using only their description vectors, followed by removing inconsistent
+ matches in a later stage.
+ Our approach results in a greater number of features matches (improving
+ the reliability and accuracy of object detection), as well as allowing
+ a significant improvement in matching speed in some situations.
+\end_layout
+
+\begin_layout Section
+Learning an Object's Appearance
+\end_layout
+
+\begin_layout Standard
+The object recognition and localisation techniques reviewed in Section 
+\begin_inset CommandInset ref
+LatexCommand ref
+reference "sec:Object-Perception"
+
+\end_inset
+
+ depend on the availability of training data for the target object.
+ If a robot is to interact with an object, it needs these training data
+ (typically in the form of cleanly segmented views of the object) to learn
+ it's appearance and build an internal representation of the object.
+ This is then matched to a scene image depending on the particular recognition
+ approach.
+ For example, in the case of SIFT feature matching, features are extracted
+ from cleanly segmented training images of the object, and then inserted
+ into a database for later use in recognition and localisation tasks 
+\begin_inset CommandInset citation
+LatexCommand cite
+key "3_Lowe_sift"
+
+\end_inset
+
+.
+\end_layout
+
+\begin_layout Standard
+In the case of an autonomous robot, a problem arises if an unknown object
+ must be recognised.
+ In some applications it may be possible to provide the robot 
+\emph on
+a priori
+\emph default
+ with training data for all objects that can be encountered in the environment.
+ However, this is not always possible to do.
+ For example, in the case of a house-hold service robot, there are many
+ different objects it may encounter, making it infeasible to provide training
+ views of every possible object for recognition and localisation.
+\end_layout
+
+\begin_layout Standard
+One possible solution is for the robot to autonomously generate training
+ data for new objects encountered in the environment.
+ This involves observing the object and separating the object image regions
+ and features from the background.
+ This problem can be solved through image segmentation, separating image
+ into background and object segments.
+ The object image segments can then be used to learn the object's appearance
+ features.
+ Image segmentation has been extensively studied in literature 
+\begin_inset CommandInset citation
+LatexCommand cite
+key "4_computer_vision"
+
+\end_inset
+
+ 
+\begin_inset CommandInset citation
+LatexCommand cite
+key "4_segmentation_review"
+
+\end_inset
+
+, with many different approaches and methods.
+ We can separate these into two classes, static image segmentation and dynamic
+ segmentation.
+ 
+\end_layout
+
+\begin_layout Subsection
+Static Image Segmentation
+\end_layout
+
+\begin_layout Standard
+Static image segmentation refers to methods that use information from a
+ single image.
+ The aim is to use the brightness, colour, contrast, and texture data contained
+ in the image to determine the object and background regions.
+ This can then be used by a robot to build an appearance model of the object
+ for later recognition and localisation.
+\end_layout
+
+\begin_layout Standard
+One of the simplest approaches is to use an intensity threshold value to
+ separate the background pixels from the object pixels 
+\begin_inset CommandInset citation
+LatexCommand cite
+key "4_computer_vision"
+
+\end_inset
+
+ 
+\begin_inset CommandInset citation
+LatexCommand cite
+key "4_threshold_segmentation"
+
+\end_inset
+
+.
+ The choice of threshold value can be determined in several ways, for example
+ choosing a fixed constant or by examining the image intensity histogram
+ to find a suitable threshold value.
+ This lightweight approach may be suitable for situations where the background
+ colour is distinct from the object's appearance.
+ An example of this is if the object is placed on a turn-table engineered
+ to have a fixed colour distinct from the object 
+\begin_inset CommandInset citation
+LatexCommand cite
+key "3_appearance_object_recognition"
+
+\end_inset
+
+ 
+\begin_inset CommandInset citation
+LatexCommand cite
+key "5_interactive_object_learning"
+
+\end_inset
+
+ (see Figure 
+\begin_inset CommandInset ref
+LatexCommand ref
+reference "fig:turn-table"
+
+\end_inset
+
+).
+ However, in the case of an uncontrolled environment this approach is not
+ effective as the background scene can have similar colour and intensity
+ to the target object.
+ 
+\end_layout
+
+\begin_layout Standard
+\begin_inset Float figure
+wide false
+sideways false
+status collapsed
+
+\begin_layout Plain Layout
+\align center
+\begin_inset Graphics
+	filename images/turn_table.jpg
+	width 60text%
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Plain Layout
+\begin_inset Caption
+
+\begin_layout Plain Layout
+\begin_inset Argument
+status open
+
+\begin_layout Plain Layout
+Turn table object segmentation.
+\end_layout
+
+\end_inset
+
+The environment may be engineered to make the background easy separable
+ from the object image regions.
+ In this case, the object is placed on a turn-table with a very dark colour,
+ making threshold segmentation possible.
+ (Image courtesy of 
+\begin_inset CommandInset citation
+LatexCommand cite
+key "3_appearance_object_recognition"
+
+\end_inset
+
+)
+\begin_inset CommandInset label
+LatexCommand label
+name "fig:turn-table"
+
+\end_inset
+
+
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+Region growing 
+\begin_inset CommandInset citation
+LatexCommand cite
+key "4_computer_vision2"
+
+\end_inset
+
+ is an approach to image segmentation that considers the relationship between
+ pixels in a region and grows the region to include adjacent pixels that
+ have similar properties.
+ There are two categories of region growing algorithms, seeded 
+\begin_inset CommandInset citation
+LatexCommand cite
+key "4_seeded_region_growing"
+
+\end_inset
+
+ and unseeded 
+\begin_inset CommandInset citation
+LatexCommand cite
+key "4_unseeded_region_growing"
+
+\end_inset
+
+.
+ In the case of seeded region growing, the algorithm is initialised with
+ a set number of starting image locations.
+ Each region is then grown outwards from the seed points by considering
+ the neighbouring pixels at the region border.
+ If a neighbouring pixel has similar properties to the region, then it is
+ included in the region.
+ An example criterion for including a neighbour pixel is if its intensity
+ is within a threshold distance of the mean intensity of the region's pixels.
+ 
+\end_layout
+
+\begin_layout Standard
+One of the issues with this approach is the choice of seed locations can
+ significantly affect the final segmentation.
+ An alternative is unseeded region growing.
+ In this case an arbitrary point is chosen in the image to start growing
+ a region.
+ When a neighbouring pixel differs from the current regions by more than
+ a threshold amount, it becomes a seed for a new region.
+\end_layout
+
+\begin_layout Standard
+A different approach to segmentation is to represent the image as a weighted,
+ undirected graph 
+\begin_inset CommandInset citation
+LatexCommand cite
+key "4_graph_segmentation"
+
+\end_inset
+
+.
+ Each pixel is represented by a graph vertex, and adjacent pixels are connected
+ by graph edges with weights determined by a similarity measure such that
+ similar pixels are connected by heavier weighted edges.
+ This graph is then partitioned in a way that minimises some energy function
+ using a graph-cut 
+\begin_inset CommandInset citation
+LatexCommand cite
+key "4_min_cut_graph"
+
+\end_inset
+
+ 
+\begin_inset CommandInset citation
+LatexCommand cite
+key "4_normalised_cut_graph"
+
+\end_inset
+
+ 
+\begin_inset CommandInset citation
+LatexCommand cite
+key "min_cut"
+
+\end_inset
+
+.
+ A cut is a partitioning of the graph vertices into two disjoint subsets
+ by removing a cut-set of edges.
+ A min-cut is a cut such that the sum of the edge weights of the cut-set
+ is minimum.
+ This can be used for image segmentation by introducing two extra vertices
+ that can represent, for example, the background and foreground image regions.
+ These are joined to all of the pixel vertices by edges weighted by the
+ 
+\emph on
+a priori
+\emph default
+ confidence that the corresponding pixel is in the foreground or background.
+ A min-cut is then performed to separate the vertices into two disjoint
+ sets.
+ The vertices that are in the set connected to the foreground represent
+ the foreground image region pixels, the remainder the background.
+ This process is shown in Figure 
+\begin_inset CommandInset ref
+LatexCommand ref
+reference "fig:min-cut"
+
+\end_inset
+
+.
+\end_layout
+
+\begin_layout Standard
+\begin_inset Float figure
+wide false
+sideways false
+status open
+
+\begin_layout Plain Layout
+\align center
+\begin_inset Graphics
+	filename images/graph_cut.png
+	width 50text%
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Plain Layout
+\begin_inset Caption
+
+\begin_layout Plain Layout
+\begin_inset Argument
+status open
+
+\begin_layout Plain Layout
+Image segmentation using min-cut.
+\end_layout
+
+\end_inset
+
+Pixels can be represented as graph vertices and adjacent pixels joined by
+ weighted edges.
+ A cut is performed to separate the graph vertices into disjoint sets linked
+ to a sink and source nodes that can represent the background and foreground
+ components.
+ (Image courtesy of 
+\begin_inset CommandInset citation
+LatexCommand cite
+key "min_cut"
+
+\end_inset
+
+)
+\begin_inset CommandInset label
+LatexCommand label
+name "fig:min-cut"
+
+\end_inset
+
+
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Plain Layout
+
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+There are many other image segmentation approaches and algorithms.
+ However, static image segmentation for the purposes of separating a target
+ object from a complex background, with no 
+\emph on
+a priori
+\emph default
+ knowledge of the object's appearance, is fundamentally reliant on the assumptio
+n that the object boundaries correspond to discontinuities in the brightness,
+ colour, texture, or contrast in the image.
+ However, for complex objects in cluttered scenes, this assumption does
+ not hold.
+ A single image may not contain sufficient information to resolve ambiguities
+ and separate a complex object from a cluttered background.
+ Figure 
+\begin_inset CommandInset ref
+LatexCommand ref
+reference "fig:complex-segmentation"
+
+\end_inset
+
+ shows an example of a complex scene with the resulting segmentation.
+ The people in the foreground are over-segmented, with the region boundaries
+ located at image discontinuities rather than at semantic object boundaries.
+\end_layout
+
+\begin_layout Standard
+\begin_inset Float figure
+wide false
+sideways false
+status open
+
+\begin_layout Plain Layout
+\align center
+\begin_inset Graphics
+	filename images/segmentation_fail.jpg
+	width 80text%
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Plain Layout
+\begin_inset Caption
+
+\begin_layout Plain Layout
+\begin_inset Argument
+status open
+
+\begin_layout Plain Layout
+Image over-segmentation.
+\end_layout
+
+\end_inset
+
+Static image segmentation can over-segment a scene image.
+ This is because the boundary of semantic objects in the scene may not correspon
+d to colour, texture, or contrast boundaries in the image.
+ (Image courtesy of 
+\begin_inset CommandInset citation
+LatexCommand cite
+key "4_graph_segmentation"
+
+\end_inset
+
+)
+\begin_inset CommandInset label
+LatexCommand label
+name "fig:complex-segmentation"
+
+\end_inset
+
+
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+Rather than relying on a single image to perform scene segmentation, a robot
+ can use multiple image dynamic segmentation to separate the target object
+ image regions from the background.
+\end_layout
+
+\begin_layout Subsection
+Dynamic Segmentation
+\end_layout
+
+\begin_layout Standard
+We refer to scene segmentation methods that use more than one image, or
+ a stream of images, as dynamic.
+ The aim is to use the temporal domain to gather more scene information
+ to improve the effectiveness of the segmentation.
+\end_layout
+
+\begin_layout Standard
+One particular class of dynamic segmentation methods is background subtraction.
+ First, a background model of a scene is constructed and then when the target
+ object is placed in the scene, the background model is subtracted from
+ the scene image.
+ The remaining regions are the foreground object.
+ Figure 
+\begin_inset CommandInset ref
+LatexCommand ref
+reference "fig:background-subtraction"
+
+\end_inset
+
+ shows an example of this process.
+ There are many variations of background subtraction 
+\begin_inset CommandInset citation
+LatexCommand cite
+key "4_background_subtraction_review"
+
+\end_inset
+
+, differing in how the background is modelled and how it is used for extracting
+ the foreground.
+ One approach is to model the background colour of each pixel as a Gaussian
+ probability distribution function 
+\begin_inset CommandInset citation
+LatexCommand cite
+key "4_background_subtraction_gaussian"
+
+\end_inset
+
+.
+ The colour value of each pixel is tracked over time and a Gaussian function
+ is fitted to the values.
+ When performing segmentation, the current value of each pixel is compared
+ to it's probability function to determine the likelihood that the pixel
+ belongs to the background.
+ If the likelihood is over a threshold, then the pixel is considered to
+ be a background pixel.
+ This approach works well for situations where the scene background is static.
+ However, if there is regular movement in the background, such as swaying
+ trees, a uni-modal Gaussian is a poor model for the value of a background
+ pixel.
+ An improved approach is to model each pixel as a mixture of Gaussians 
+\begin_inset CommandInset citation
+LatexCommand cite
+key "4_background_subtraction_mixture_gaussian"
+
+\end_inset
+
+.
+ In this way regular background movement can be taken into account.
+\end_layout
+
+\begin_layout Standard
+\begin_inset Float figure
+wide false
+sideways false
+status open
+
+\begin_layout Plain Layout
+\align center
+\begin_inset Graphics
+	filename images/background-subtraction.jpg
+	width 80text%
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Plain Layout
+\begin_inset Caption
+
+\begin_layout Plain Layout
+\begin_inset Argument
+status open
+
+\begin_layout Plain Layout
+Background subtraction segmentation.
+\end_layout
+
+\end_inset
+
+Foreground segmentation using background subtraction.
+ The background model is learned over time (top right).
+ When foreground objects enter the scene (top left), the background model
+ is subtracted from the image (bottom left).
+ This allows the foreground image regions to be extracted (bottom right).
+ (Image courtesy of 
+\begin_inset CommandInset citation
+LatexCommand cite
+key "4_background_subtraction_image"
+
+\end_inset
+
+)
+\begin_inset CommandInset label
+LatexCommand label
+name "fig:background-subtraction"
+
+\end_inset
+
+
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Plain Layout
+
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+Using pure background subtraction for foreground segmentation can be problematic
+ in cases where the foreground object does not move uniformly.
+ This may be the case for a person who is moving only their arms and head,
+ but not their body.
+ In this case the body would be erroneously labelled as background, while
+ the limbs and head as foreground.
+ By combining colour and contrast with motion cues, more effective segmentation
+ in such cases can be achieved 
+\begin_inset CommandInset citation
+LatexCommand cite
+key "4_video_segmentation"
+
+\end_inset
+
+.
+ Another approach is to segment the scene into different motion layers,
+ rather than simply foreground and background 
+\begin_inset CommandInset citation
+LatexCommand cite
+key "4_motion_layer_extraction"
+
+\end_inset
+
+.
+ 
+\end_layout
+
+\begin_layout Standard
+Nonetheless, background subtraction assumes that the background is only
+ changing slowly or changes in a periodic manner.
+ Large unpredictable movement in the background would result in that movement
+ being mistaken for the foreground object.
+\end_layout
+
+\begin_layout Standard
+Another dynamic object segmentation approach is to combine pixel based segmentat
+ion and feature tracking to generate object image snapshots.
+ In the work of Southey 
+\emph on
+et al
+\emph default
+ 
+\begin_inset CommandInset citation
+LatexCommand cite
+key "4_object_discovery_motion"
+
+\end_inset
+
+, the scene is observed using a stereo camera pair to generate a depth map.
+ The depth information for each pixel is used in combination with the pixel
+ intensity to perform a segmentation of the scene using a normalised cut
+ algorithm 
+\begin_inset CommandInset citation
+LatexCommand cite
+key "4_normalised_cut_graph"
+
+\end_inset
+
+.
+ This, however, leads to an over-segmentation of the target objects (see
+ Figure 
+\begin_inset CommandInset ref
+LatexCommand ref
+reference "fig:object_discovery1"
+
+\end_inset
+
+).
+ This problem is addressed by moving the target objects and tracking the
+ motion of the SIFT features.
+ This information is then used to merge together the over-segmented regions
+ by considering that SIFT features moving together in adjacent regions should
+ be part of the same segment.
+ The result is correctly segmented target object image regions (see Figure
+ 
+\begin_inset CommandInset ref
+LatexCommand ref
+reference "fig:object_discovery2"
+
+\end_inset
+
+).
+ However, this method does not effectively address the issue of background
+ motion as moving background objects can be mistaken for the foreground.
+\end_layout
+
+\begin_layout Standard
+\begin_inset Float figure
+wide false
+sideways false
+status open
+
+\begin_layout Plain Layout
+\align center
+\begin_inset Graphics
+	filename images/obj.jpg
+	width 80text%
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Plain Layout
+\begin_inset Caption
+
+\begin_layout Plain Layout
+\begin_inset Argument
+status open
+
+\begin_layout Plain Layout
+Segmentation using motion and SIFT feature tracking.
+\end_layout
+
+\end_inset
+
+In the method presented by Southey 
+\emph on
+et al
+\emph default
+ 
+\begin_inset CommandInset citation
+LatexCommand cite
+key "4_object_discovery_motion"
+
+\end_inset
+
+, the scene image (left) is first segmented using pixel intensity and depth
+ information using a normalised cut algorithm.
+ This results in an over-segmentation of the image (right) as the pixel
+ intensity boundaries do not correspond to object boundaries.
+ (Images courtesy of 
+\begin_inset CommandInset citation
+LatexCommand cite
+key "4_object_discovery_motion"
+
+\end_inset
+
+)
+\begin_inset CommandInset label
+LatexCommand label
+name "fig:object_discovery1"
+
+\end_inset
+
+
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Plain Layout
+
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+\begin_inset Float figure
+wide false
+sideways false
+status open
+
+\begin_layout Plain Layout
+\align center
+\begin_inset Graphics
+	filename images/obj2.jpg
+	width 80text%
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Plain Layout
+\begin_inset Caption
+
+\begin_layout Plain Layout
+\begin_inset Argument
+status open
+
+\begin_layout Plain Layout
+Segmentation using motion and SIFT feature tracking.
+\end_layout
+
+\end_inset
+
+In the method presented by Southey 
+\emph on
+et al
+\emph default
+ 
+\begin_inset CommandInset citation
+LatexCommand cite
+key "4_object_discovery_motion"
+
+\end_inset
+
+, tracked SIFT features (left) are used to join together segmented image
+ regions that move together.
+ The merged regions correspond to the target objects.
+ (Image courtesy of 
+\begin_inset CommandInset citation
+LatexCommand cite
+key "4_object_discovery_motion"
+
+\end_inset
+
+)
+\begin_inset CommandInset label
+LatexCommand label
+name "fig:object_discovery2"
+
+\end_inset
+
+
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Plain Layout
+
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Subsubsection*
+Active Robot Segmentation
+\end_layout
+
+\begin_layout Standard
+Active robot segmentation refers to methods that rely on the robot actively
+ manipulating the target object in the environment to separate it from the
+ background.
+ For example, the robot can nudge the object to generate movement and by
+ detecting the movement, segment the object image regions.
+ One particular approach uses object symmetry to track the object motion
+ and determine the object displacement 
+\begin_inset CommandInset citation
+LatexCommand cite
+key "4_nudging_segmentation"
+
+\end_inset
+
+.
+ Symmetric regions are found in the scene and nudged by the robot manipulator
+ perpendicular to the camera viewing direction.
+ The displacement of the axis of symmetry in the scene image is used as
+ a cue to determine the object region (see Figure 
+\begin_inset CommandInset ref
+LatexCommand ref
+reference "fig:symmetric_nudging"
+
+\end_inset
+
+).
+ However, this approach is only applicable to near-symmetric objects.
+\end_layout
+
+\begin_layout Standard
+\begin_inset Float figure
+wide false
+sideways false
+status open
+
+\begin_layout Plain Layout
+\align center
+\begin_inset Graphics
+	filename images/symmetric_nudge.jpg
+	width 60text%
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Plain Layout
+\begin_inset Caption
+
+\begin_layout Plain Layout
+\begin_inset Argument
+status open
+
+\begin_layout Plain Layout
+Image segmentation of near-symmetrical objects.
+\end_layout
+
+\end_inset
+
+Nudging a symmetrical object while tracking the axis of symmetry line allows
+ the object to be segmented from the background.
+ (Image courtesy of 
+\begin_inset CommandInset citation
+LatexCommand cite
+key "4_nudging_segmentation"
+
+\end_inset
+
+)
+\begin_inset CommandInset label
+LatexCommand label
+name "fig:symmetric_nudging"
+
+\end_inset
+
+
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Plain Layout
+
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+A more general approach to object segmentation through active robot manipulation
+ is presented by Fitzpatrick 
+\emph on
+et al
+\emph default
+ 
+\begin_inset CommandInset citation
+LatexCommand cite
+key "4_first_contact"
+
+\end_inset
+
+ 
+\begin_inset CommandInset citation
+LatexCommand cite
+key "4_manipulation_vision"
+
+\end_inset
+
+.
+ The robot uses it's manipulator to sweep the area containing the target
+ object.
+ This is done while tracking the scene motion by using per pixel frame differenc
+ing.
+ When the robot's manipulator makes contact with the target object, a burst
+ of motion is generated due to the movement of the object (see Figure 
+\begin_inset CommandInset ref
+LatexCommand ref
+reference "fig:fitzpatrick1"
+
+\end_inset
+
+).
+ The burst of motion is located around the edges of the object, and can
+ have discontinuities.
+ To extract the full object image region, a min-cut 
+\begin_inset CommandInset citation
+LatexCommand cite
+key "min_cut"
+
+\end_inset
+
+ 
+\begin_inset CommandInset citation
+LatexCommand cite
+key "min_cut_algorithm"
+
+\end_inset
+
+ algorithm is used (see Figure 
+\begin_inset CommandInset ref
+LatexCommand ref
+reference "fig:fitzpatrick2"
+
+\end_inset
+
+).
+ Min-cut uses the sparse object motion information along the edges to extract
+ the foreground image region.
+ Object segmentation can be refined by repeating the process multiple times
+ 
+\begin_inset CommandInset citation
+LatexCommand cite
+key "4_interactive_segmentation"
+
+\end_inset
+
+.
+\end_layout
+
+\begin_layout Standard
+\begin_inset Float figure
+wide false
+sideways false
+status open
+
+\begin_layout Plain Layout
+\align center
+\begin_inset Graphics
+	filename images/optical_flow_segmentation.jpg
+	width 80text%
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Plain Layout
+\begin_inset Caption
+
+\begin_layout Plain Layout
+\begin_inset Argument
+status open
+
+\begin_layout Plain Layout
+Object segmentation using image motion.
+\end_layout
+
+\end_inset
+
+In the system presented by Fitzpatrick 
+\emph on
+et al
+\emph default
+, the robot sweeps the scene with the manipulator, tracking the image motion
+ using frame differencing.
+ When the robot's end-effector makes contact with the object, a burst of
+ motion is detected.
+ This can then be used for object region segmentation.
+ (Image courtesy of 
+\begin_inset CommandInset citation
+LatexCommand cite
+key "4_manipulation_vision"
+
+\end_inset
+
+)
+\begin_inset CommandInset label
+LatexCommand label
+name "fig:fitzpatrick1"
+
+\end_inset
+
+
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Plain Layout
+
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+\begin_inset Float figure
+wide false
+sideways false
+status open
+
+\begin_layout Plain Layout
+\align center
+\begin_inset Graphics
+	filename images/optical_flow_mincut.jpg
+	width 100text%
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Plain Layout
+\begin_inset Caption
+
+\begin_layout Plain Layout
+\begin_inset Argument
+status open
+
+\begin_layout Plain Layout
+Object segmentation using image motion.
+\end_layout
+
+\end_inset
+
+The robot manipulator bumps the target object.
+ The motion due to the manipulator is filtered out, and the object regions
+ are segmented using a min-cut algorithm.
+ The result is a clean segmentation of the object from the background.
+ (Image courtesy of 
+\begin_inset CommandInset citation
+LatexCommand cite
+key "4_first_contact"
+
+\end_inset
+
+)
+\begin_inset CommandInset label
+LatexCommand label
+name "fig:fitzpatrick2"
+
+\end_inset
+
+
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Plain Layout
+
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+Robot-induced object motion for foreground segmentation works well for scenes
+ with a static background.
+ However, any significant and unpredictable background motion can result
+ in incorrect segmentation.
+ If a background object moves at the same time as the target object, the
+ resulting segmentation could include the background object as well as the
+ target object image regions.
+ Another issue is the nature of the manipulation of the object.
+ The method presented by Fitzpatrick 
+\emph on
+et al 
+\emph default
+
+\begin_inset CommandInset citation
+LatexCommand cite
+key "4_first_contact"
+
+\end_inset
+
+ 
+\begin_inset CommandInset citation
+LatexCommand cite
+key "4_manipulation_vision"
+
+\end_inset
+
+ requires that the object is placed in the scene and then bumped by the
+ robot manipulator.
+ This may be sufficient for learning a single aspect of the object, however,
+ learning multiple aspects from different angles may be difficult.
+ For example, in the case of a cube shaped object, there are only six orientatio
+ns in which it can be placed on a flat surface.
+ To observe the object from some view points, the robot must orient its
+ body and camera appropriately, rather than orienting the object.
+ Ideally, the robot should hold the object and be able to orient it appropriatel
+y to view and learn the various aspects.
+\end_layout
+
+\begin_layout Subsection*
+Improvements
+\end_layout
+
+\begin_layout Standard
+In Chapter 4 we present a method for a robot to autonomously segment object
+ features from the background to build a model for object recognition.
+ This work was published at the 2011 Australian Conference on Robotics and
+ Automation (ACRA) 
+\begin_inset CommandInset citation
+LatexCommand cite
+key "sushkov_feature_segmentation"
+
+\end_inset
+
+.
+ We address the issue of background motion, background clutter, and the
+ ability to observe different aspects of the object.
+ Our approach is to track individual SIFT features in the scene while the
+ robot moves the object.
+ We use the long term trajectory data for each feature to segment the object
+ features from the static background, as well as from any background motion.
+ The segmented object SIFT features can then form the basis of object recognitio
+n as well as for reconstructing the object's 3D shape.
+\end_layout
+
+\begin_layout Section
+Reconstructing an Object's Shape
+\end_layout
+
+\begin_layout Standard
+After learning an object's appearance, the next step for a robot to be able
+ to interact with the object is to reconstruct it's 3D shape.
+ Knowing an object's shape allows the robot to perform grasp planning 
+\begin_inset CommandInset citation
+LatexCommand cite
+key "5_grasp_planning"
+
+\end_inset
+
+ 
+\begin_inset CommandInset citation
+LatexCommand cite
+key "5_grasp_planning2"
+
+\end_inset
+
+ and motion planning 
+\begin_inset CommandInset citation
+LatexCommand cite
+key "5_motion_planning"
+
+\end_inset
+
+ effectively.
+ There is a large amount of literature on the topic of 3D object reconstruction,
+ using a wide variety of methods.
+ These vary in their speed, accuracy, assumptions about the shape of the
+ object, and suitability for an autonomous robot to reconstruct an object
+ in a complex environment.
+\end_layout
+
+\begin_layout Standard
+A technique for very high quality 3D reconstruction is to use a laser to
+ project a line of light onto an object placed on a turn-table 
+\begin_inset CommandInset citation
+LatexCommand cite
+key "5_range_images"
+
+\end_inset
+
+ 
+\begin_inset CommandInset citation
+LatexCommand cite
+key "5_range_images2"
+
+\end_inset
+
+.
+ A camera is used to detect the reflected line of light on the surface of
+ the object.
+ The shape and location of the line in the camera image specifies the contour
+ of the object (see Figure 
+\begin_inset CommandInset ref
+LatexCommand ref
+reference "fig:range_projection_reconstruction"
+
+\end_inset
+
+).
+ The object is rotated on the turn-table, allowing the full 
+\begin_inset Formula $360\textdegree$
+\end_inset
+
+ shape of the object to be reconstructed.
+ This method can output an extremely accurate and dense 3D reconstruction
+ of the object.
+ However, it requires that the object is placed in a carefully engineered
+ environment, with a turn-table and calibrated laser projector and camera.
+\end_layout
+
+\begin_layout Standard
+\begin_inset Float figure
+wide false
+sideways false
+status open
+
+\begin_layout Plain Layout
+\align center
+\begin_inset Graphics
+	filename images/scanner_reconstruction.png
+	width 60text%
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Plain Layout
+\begin_inset Caption
+
+\begin_layout Plain Layout
+\begin_inset Argument
+status open
+
+\begin_layout Plain Layout
+Shape reconstruction using projected light.
+\end_layout
+
+\end_inset
+
+By projecting a strip of light onto an object and observing the resulting
+ image, the contour of the object can be determined.
+ (Image courtesy of 
+\begin_inset CommandInset citation
+LatexCommand cite
+key "5_range_images"
+
+\end_inset
+
+)
+\begin_inset CommandInset label
+LatexCommand label
+name "fig:range_projection_reconstruction"
+
+\end_inset
+
+
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Plain Layout
+
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+Instead of using a specialised laser projector to determine an object's
+ shape, its appearance in a camera image can be used for reconstruction.
+ For example, the object's silhouette can be used to reconstruct its shape
+ 
+\begin_inset CommandInset citation
+LatexCommand cite
+key "5_silhouette_reconstruction"
+
+\end_inset
+
+ 
+\begin_inset CommandInset citation
+LatexCommand cite
+key "5_silhouette_reconstruction3"
+
+\end_inset
+
+.
+ A single silhouette image cannot be used to determine the object's volume,
+ but the areas of the scene that are not part of the object volume (the
+ image areas outside the silhouette).
+ By combining these data from many images of the object from different view
+ points, the object volume can be determined.
+ The problem with this approach is that for some objects the visual hull
+ is not equal to the shape of the object.
+ For example, concave indents on the surface of the object cannot be accounted
+ for in the silhouette, and thus cannot be reconstructed using this technique.
+\end_layout
+
+\begin_layout Standard
+The shape of an object can be inferred from a series of images in which
+ the camera is moving relative to the object.
+ The observed motion field of the series of images gives clues as to the
+ structure of the shape.
+ This technique of 3D shape recovery is known as structure from motion 
+\begin_inset CommandInset citation
+LatexCommand cite
+key "5_structure_from_motion2"
+
+\end_inset
+
+ 
+\begin_inset CommandInset citation
+LatexCommand cite
+key "5_structure_from_motion"
+
+\end_inset
+
+.
+ 
+\end_layout
+
+\begin_layout Standard
+Another technique is to use SIFT features for reconstruction.
+ Each feature is highly discriminatory, and therefore allows a correspondence
+ to be built between different images of a scene.
+ This has been used for robot SLAM 
+\begin_inset CommandInset citation
+LatexCommand cite
+key "5_sift_slam"
+
+\end_inset
+
+, and can be applied for object reconstruction by observing the object from
+ multiple view points and correlating the SIFT features between the different
+ images.
+ By doing this, the relative 3D positions of the SIFT features can be determined
+, and used to build a 3D point cloud of the surface of the object 
+\begin_inset CommandInset citation
+LatexCommand cite
+key "5_scene_modeling_features"
+
+\end_inset
+
+ 
+\begin_inset CommandInset citation
+LatexCommand cite
+key "5_unordered_reconstruction"
+
+\end_inset
+
+.
+ Figure 
+\begin_inset CommandInset ref
+LatexCommand ref
+reference "fig:sift_reconstruction_modeling"
+
+\end_inset
+
+ shows an example of an object point cloud recovered from correlated SIFT
+ features.
+ Another method uses matched SIFT features between images as a basis to
+ perform further shape recovery of the scene using Delaunay triangulation
+ and graph cuts 
+\begin_inset CommandInset citation
+LatexCommand cite
+key "5_graph_cut_reconstruction"
+
+\end_inset
+
+.
+ 
+\end_layout
+
+\begin_layout Standard
+Local image features other than SIFT can be used as well.
+ Yamazaki 
+\emph on
+et al
+\emph default
+ 
+\begin_inset CommandInset citation
+LatexCommand cite
+key "5_mobile_robot_reconstruction"
+
+\end_inset
+
+ presented a method for a wheeled robot to reconstruct an object by driving
+ around it and tracking the object's image features using a Kanade-Lucas-Tomasi
+ (KLT) tracker 
+\begin_inset CommandInset citation
+LatexCommand cite
+key "5_klt_tracker"
+
+\end_inset
+
+ 
+\begin_inset CommandInset citation
+LatexCommand cite
+key "5_klt_tracker2"
+
+\end_inset
+
+.
+ The data from the motion was used to construct a point cloud representation
+ of the object's surface.
+ The problem with these approaches is that SIFT features (and most other
+ local image features) are found in highly textured image regions, around
+ corners and edges.
+ Plain coloured regions will not generate many SIFT features, or none at
+ all, resulting in insufficient shape information for parts of the object.
+ 
+\end_layout
+
+\begin_layout Standard
+\begin_inset Float figure
+wide false
+sideways false
+status open
+
+\begin_layout Plain Layout
+\align center
+\begin_inset Graphics
+	filename images/unordered_sift_reconstruction.jpg
+	width 80text%
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Plain Layout
+\begin_inset Caption
+
+\begin_layout Plain Layout
+\begin_inset Argument
+status open
+
+\begin_layout Plain Layout
+Shape reconstruction using SIFT feature point cloud.
+\end_layout
+
+\end_inset
+
+In the system presented by Skrypnyk 
+\emph on
+et al
+\emph default
+, a point cloud is generated by correlating SIFT features from multiple
+ images of the scene.
+ The left image shows the cup placed in the environment, the right image
+ shows the resulting SIFT feature point cloud and the camera view points
+ used the generate it.
+ (Image courtesy of 
+\begin_inset CommandInset citation
+LatexCommand cite
+key "5_scene_modeling_features"
+
+\end_inset
+
+)
+\begin_inset CommandInset label
+LatexCommand label
+name "fig:sift_reconstruction_modeling"
+
+\end_inset
+
+
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Plain Layout
+
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+Structured light is one method that can be used to recover 3D shape in areas
+ that lack texture 
+\begin_inset CommandInset citation
+LatexCommand cite
+key "5_realtime_model_acquisition"
+
+\end_inset
+
+.
+ This class of techniques use a projector to project a light pattern (typically
+ in the IR spectrum) onto the scene.
+ This light pattern is then detected by a camera and can be used to determine
+ the depth of the scene at each image point.
+ This method has been incorporated into consumer devices such as the Microsoft
+ Kinect
+\begin_inset Foot
+status open
+
+\begin_layout Plain Layout
+http://www.xbox.com/en-US/kinect
+\end_layout
+
+\end_inset
+
+.
+ This provides an inexpensive and reliable sensor for finding the depth
+ information of a scene as viewed from the camera.
+ Accurate and fast scene reconstruction is possible using a moving Kinect
+ camera 
+\begin_inset CommandInset citation
+LatexCommand cite
+key "5_kinect_reconstruction"
+
+\end_inset
+
+.
+ A Kinect sensor outputs a series of frame images, each image is composed
+ of a standard RGB colour component and a depth value for each pixel.
+ These data can be used to create a 3D model of the scene.
+ However, a single frame only provides partial information, as many parts
+ of the scene may be occluded or out of view.
+ To compensate for this, the Kinect is moved around the scene, and the individua
+l scene snapshots are stitched together using an Iterative Closest Point
+ (ICP) algorithm 
+\begin_inset CommandInset citation
+LatexCommand cite
+key "5_efficient_icp"
+
+\end_inset
+
+.
+ ICP is a method of aligning two 3D point clouds by repeatedly shifting
+ them to minimise the distance between corresponding point pairs.
+\end_layout
+
+\begin_layout Standard
+For a robot to effectively reconstruct an object, it can grasp the object
+ and manipulate it to view it from different points of view.
+ However, this introduces the problem of filtering out the robot manipulator
+ from the 3D model data.
+ Otherwise the robot arm may be mistaken for the object.
+ A secondary issue is how to optimally orient the object to view it from
+ all of the necessary angles, as well as to account for the robot gripper
+ and arm occluding certain parts of the object.
+ Krainin 
+\emph on
+et al
+\emph default
+ 
+\begin_inset CommandInset citation
+LatexCommand cite
+key "5_manipulator_object_modeling"
+
+\end_inset
+
+ address these issues by first learning an accurate 3D model of the arm
+ to filter out arm segments, and by maintaining a confidence distribution
+ over the object's surface to indicate the areas that need to be observed
+ to learn the complete model of the object (see Figure 
+\begin_inset CommandInset ref
+LatexCommand ref
+reference "fig:kinect_manipulator_reconstruction"
+
+\end_inset
+
+).
+\end_layout
+
+\begin_layout Standard
+\begin_inset Float figure
+wide false
+sideways false
+status open
+
+\begin_layout Plain Layout
+\align center
+\begin_inset Graphics
+	filename images/obj_reconstruct.jpg
+	width 100text%
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Plain Layout
+\begin_inset Caption
+
+\begin_layout Plain Layout
+\begin_inset Argument
+status open
+
+\begin_layout Plain Layout
+Held object surface reconstruction.
+\end_layout
+
+\end_inset
+
+Robot reconstructing a held object using a depth camera (left).
+ The object is observed from multiple points of view (top right) to account
+ for occlusions.
+ The shape uncertainty of the object (red in bottom right) decreases as
+ more observations are made.
+ (Image courtesy of 
+\begin_inset CommandInset citation
+LatexCommand cite
+key "5_next_best_view_generation"
+
+\end_inset
+
+)
+\begin_inset CommandInset label
+LatexCommand label
+name "fig:kinect_manipulator_reconstruction"
+
+\end_inset
+
+
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+In Chapter 5 we present a system that combines existing 3D reconstruction
+ techniques with the segmentation and feature matching methods developed
+ in Chapter 3 and Chapter 4, to allow a robot to autonomously recover the
+ shape of an object in a complex environment.
+\end_layout
+
+\begin_layout Section
+Learning an Object's Properties
+\end_layout
+
+\begin_layout Standard
+Learning an object's appearance and shape is not always sufficient for a
+ robot to effectively use the object.
+ Tasks such as grasping, manipulation, and tool use 
+\begin_inset CommandInset citation
+LatexCommand cite
+key "6_robot_manipulation"
+
+\end_inset
+
+ 
+\begin_inset CommandInset citation
+LatexCommand cite
+key "6_robot_motion_planning"
+
+\end_inset
+
+ 
+\begin_inset CommandInset citation
+LatexCommand cite
+key "robot_challenges"
+
+\end_inset
+
+ may require the robot to learn properties of the object other than shape
+ and appearance, as they may affect the outcome of some robot actions.
+ Furthermore, these properties may not be discoverable through passive observati
+on, but may instead require active robot interaction with the object.
+ For example, an object's centre of mass cannot be determined by passive
+ observation, as it may depend on the internal mass distribution of the
+ object.
+ Instead the robot can interact with the object, performing experiments
+ to determine the centre of mass (for example: by dropping the object from
+ different orientations and observing the outcome).
+\end_layout
+
+\begin_layout Subsection*
+Affordance Learning
+\end_layout
+
+\begin_layout Standard
+There has been some previous research in the area of learning object properties,
+ much of it in the context of affordances.
+ An affordance is a term first introduced by J.
+ J.
+ Gibson 
+\begin_inset CommandInset citation
+LatexCommand cite
+key "6_affordances"
+
+\end_inset
+
+ in the field of cognitive psychology.
+ It refers to a property of an object that allows an action to be performed.
+ For example, a door knob affords being grasped and a button affords being
+ pressed.
+ Work in this area explores how a robot can interact with an object, by
+ performing actions and observing the outcomes, to determine the affordances
+ and properties of the object.
+\end_layout
+
+\begin_layout Standard
+In the work by Griffith 
+\emph on
+et al
+\emph default
+ 
+\begin_inset CommandInset citation
+LatexCommand cite
+key "6_stoytchev_containeraffordance"
+
+\end_inset
+
+, a robot categorises objects into container and non-container categories.
+ The robot does this by dropping a small block over the object, and then
+ pushing the object (see Figure 
+\begin_inset CommandInset ref
+LatexCommand ref
+reference "fig:container_affordance"
+
+\end_inset
+
+).
+ If the robot detects that the block and object move together, then the
+ robot's confidence that it is a container increases.
+ After performing these experiments on a number of different objects, the
+ robot is able to learn the visual features that distinguish container and
+ non-container objects, allowing it to categorise a novel object using its
+ depth image.
+\end_layout
+
+\begin_layout Standard
+\begin_inset Float figure
+wide false
+sideways false
+status open
+
+\begin_layout Plain Layout
+\align center
+\begin_inset Graphics
+	filename images/container.jpg
+	width 100text%
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Plain Layout
+\begin_inset Caption
+
+\begin_layout Plain Layout
+\begin_inset Argument
+status open
+
+\begin_layout Plain Layout
+Robot classification of object affordances.
+\end_layout
+
+\end_inset
+
+Griffith 
+\emph on
+et al
+\emph default
+ developed a method for a robot to classify objects into container and non-conta
+iner classes by dropping a block over each of them and observing if subsequently
+ the block and the object moved together.
+ (Image courtesy of 
+\begin_inset CommandInset citation
+LatexCommand cite
+key "6_stoytchev_containeraffordance"
+
+\end_inset
+
+)
+\begin_inset CommandInset label
+LatexCommand label
+name "fig:container_affordance"
+
+\end_inset
+
+
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+In other work, the robot determines whether an object is rigid or soft-bodied
+ using exploratory poking actions 
+\begin_inset CommandInset citation
+LatexCommand cite
+key "6_rigid_nonrigid"
+
+\end_inset
+
+.
+ An object is placed on a table and its image based skeleton is extracted.
+ The robot then performs a poking action and compares the initial image
+ based skeleton to the resulting skeleton.
+ The difference between the two is used to determine if the object is rigid
+ or non-rigid, as well as to find the location of any joints.
+ A similar approach has been used to locate and classify the joints of an
+ articulated object such as a pair of scissors 
+\begin_inset CommandInset citation
+LatexCommand cite
+key "6_articulated_objects"
+
+\end_inset
+
+.
+\end_layout
+
+\begin_layout Standard
+In addition to the previous work focusing on learning the object properties,
+ there has also been work in learning properties inherent to the relationship
+ between the robot and the object.
+ The learning of grasping affordances of various objects is explored by
+ Kraft 
+\emph on
+et al
+\emph default
+ 
+\begin_inset CommandInset citation
+LatexCommand cite
+key "6_object_grasping_model"
+
+\end_inset
+
+ 
+\begin_inset CommandInset citation
+LatexCommand cite
+key "6_learning_grasp_affordances"
+
+\end_inset
+
+.
+ In this work a robot repeatedly performs experiments on various objects,
+ attempting to grasp them at different points.
+ The success and failure of these grasps allows the robot to build a model
+ of the object that defines the areas of the object that can be successfully
+ grasped.
+\end_layout
+
+\begin_layout Standard
+Stoytchev presented work on grounding the affordance representation of an
+ object in the context of a robot's behaviours 
+\begin_inset CommandInset citation
+LatexCommand cite
+key "6_stoytchev_affordance"
+
+\end_inset
+
+ 
+\begin_inset CommandInset citation
+LatexCommand cite
+key "6_binding_affordances"
+
+\end_inset
+
+.
+ The robot in this case learns how various objects extend its reach.
+ The objects in question are stick tools of different shapes.
+ The robot performs behavioural babbling with each tool, moving them around
+ the workspace while observing the effect on a puck object (see Figure 
+\begin_inset CommandInset ref
+LatexCommand ref
+reference "fig:robot_reach_extension"
+
+\end_inset
+
+).
+ The resulting movement of the puck when it is manipulated with the different
+ tools allows the robot to build an affordance model of each object and
+ define how the tool can be used to move a puck.
+ Brown 
+\begin_inset CommandInset citation
+LatexCommand cite
+key "6_solly"
+
+\end_inset
+
+ further extended the concept of grounding an object's affordances and propertie
+s by incorporating active learning and inductive logic to build a symbolic
+ planner based description of a tool object.
+ This allows a level of generalisation to be built into the affordance represent
+ation.
+\end_layout
+
+\begin_layout Standard
+\begin_inset Float figure
+wide false
+sideways false
+status open
+
+\begin_layout Plain Layout
+\align center
+\begin_inset Graphics
+	filename images/reach_affordance.jpg
+	width 100text%
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Plain Layout
+\begin_inset Caption
+
+\begin_layout Plain Layout
+\begin_inset Argument
+status open
+
+\begin_layout Plain Layout
+Robot classification of object reach affordances.
+\end_layout
+
+\end_inset
+
+Work by Stoytchev involved a robot learning the reach extension tool affordance
+ model of various stick objects (left).
+ The reach extension model is represented as how the position of a puck
+ is affected by moving the stick object (right).
+ (Image courtesy of 
+\begin_inset CommandInset citation
+LatexCommand cite
+key "6_stoytchev_affordance"
+
+\end_inset
+
+)
+\begin_inset CommandInset label
+LatexCommand label
+name "fig:robot_reach_extension"
+
+\end_inset
+
+
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+Fitzpatrick 
+\emph on
+et al
+\emph default
+ developed a method for a robot to learn the motion model of an object in
+ response to a prodding action 
+\begin_inset CommandInset citation
+LatexCommand cite
+key "6_fitzpatrick"
+
+\end_inset
+
+.
+ The robot uses its manipulator to bump various objects from different direction
+s (see Figure 
+\begin_inset CommandInset ref
+LatexCommand ref
+reference "fig:object_tap_fitzpatrick"
+
+\end_inset
+
+).
+ The resulting movement is used to construct a model of the motion of the
+ object, represented as a motion vector distribution parametrised by the
+ poke angle.
+ Different objects will have different motion models.
+ For example, a cylinder shaped object will roll when bumped from some direction
+s, but not from others.
+ A ball, on the other hand, will roll regardless of the direction of the
+ bump.
+ These data are then used to categorise objects, and to choose an appropriate
+ action to make a particular object move.
+\end_layout
+
+\begin_layout Standard
+\begin_inset Float figure
+wide false
+sideways false
+status open
+
+\begin_layout Plain Layout
+\align center
+\begin_inset Graphics
+	filename images/object_tap.jpg
+	width 100text%
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Plain Layout
+\begin_inset Caption
+
+\begin_layout Plain Layout
+\begin_inset Argument
+status open
+
+\begin_layout Plain Layout
+Robot classification of object motion properties.
+\end_layout
+
+\end_inset
+
+The approach by Fitzpatrick involved the robot poking an object from different
+ angles and tracking the resulting movement.
+ This movement data are used to build a motion model of each object.
+ (Image courtesy of 
+\begin_inset CommandInset citation
+LatexCommand cite
+key "6_fitzpatrick_thesis"
+
+\end_inset
+
+)
+\begin_inset CommandInset label
+LatexCommand label
+name "fig:object_tap_fitzpatrick"
+
+\end_inset
+
+
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Plain Layout
+
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+The main shortcoming of the approach presented by Fitzpatrick is that the
+ representation of the object's model does not generalise to different situation
+s.
+ For each object, the model is in the form of an explicit distribution over
+ motion vectors, learned from the robot's exploratory poking actions.
+ Such a model is capable of predicting the object's motion only in a similar
+ environment as the learning environment.
+ However, if the environment is changed, for example by putting the object
+ on a slope, the learned model will not make accurate predictions.
+ 
+\end_layout
+
+\begin_layout Standard
+There has been other similar work, using a neural network to model the motion
+ as a result of a robot poking action 
+\begin_inset CommandInset citation
+LatexCommand cite
+key "6_object_motion_nn"
+
+\end_inset
+
+.
+ Another method of modelling an object's affordance is to use a Bayesian
+ network 
+\begin_inset CommandInset citation
+LatexCommand cite
+key "6_bayesian_networks_affordance"
+
+\end_inset
+
+.
+ In this case, the Bayesian network represents the probability of various
+ outcomes when different actions are performed on objects with certain propertie
+s (size, colour, shape).
+ The Bayesian network is built from empirical data obtained by the robot
+ performing many trials of the actions on different objects and observing
+ the results.
+ Using a Bayesian network to model the object properties is a more general
+ representation capable of expressing a variety of outcomes and actions
+ as compared to explicitly modelling the motion vector 
+\begin_inset CommandInset citation
+LatexCommand cite
+key "6_fitzpatrick"
+
+\end_inset
+
+.
+ However, this does not solve the problem of applying the learned model
+ to environments significantly different to the learning environment.
+\end_layout
+
+\begin_layout Standard
+The choice of robot exploratory actions is a further shortcoming of existing
+ methods.
+ Many of the existing methods use a behavioural babbling approach 
+\begin_inset CommandInset citation
+LatexCommand cite
+key "6_behavioural_babling"
+
+\end_inset
+
+ 
+\begin_inset CommandInset citation
+LatexCommand cite
+key "6_behavioural_babbling_affordances"
+
+\end_inset
+
+ where the robot performs either random actions or a fixed list of predetermined
+ actions.
+ The disadvantage of this is that some actions may be more informative than
+ others and therefore they should be prioritised ahead of the less informative
+ actions.
+ Furthermore, how informative a certain action is depends on the results
+ of the previous actions.
+ Performing a random or fixed list of actions is not an efficient way of
+ learning an object's properties.
+ Alternatively, a robot can learn an object's properties by demonstration
+ and imitation 
+\begin_inset CommandInset citation
+LatexCommand cite
+key "6_affordances_imitation"
+
+\end_inset
+
+, where a human interacts with the object and the robot infers the properties
+ by observing the outcomes.
+\end_layout
+
+\begin_layout Subsection*
+System Identification
+\end_layout
+
+\begin_layout Standard
+A related concept to discovering the properties of an object is system identific
+ation 
+\begin_inset CommandInset citation
+LatexCommand cite
+key "6_system_identification_book1"
+
+\end_inset
+
+ 
+\begin_inset CommandInset citation
+LatexCommand cite
+key "6_system_identification_book2"
+
+\end_inset
+
+.
+ System identification is the process of modelling a dynamic system using
+ statistical methods, such as linear regression, based on some experimental
+ measurements of the system.
+ This also includes elements of optimal experimental design 
+\begin_inset CommandInset citation
+LatexCommand cite
+key "6_information_of_experiment"
+
+\end_inset
+
+ 
+\begin_inset CommandInset citation
+LatexCommand cite
+key "6_optimal_experiments"
+
+\end_inset
+
+ to generate useful and informative measurements for model fitting.
+ System identification is commonly applied in control engineering applications
+ for building a model of a complex system to be used in a control algorithm.
+ An example application of this is to model the behaviour of a small unmanned
+ helicopter 
+\begin_inset CommandInset citation
+LatexCommand cite
+key "6_system_id_uav"
+
+\end_inset
+
+.
+ In this case, the helicopter is flown using remote control by an experienced
+ operator.
+ The response of the helicopter to various inputs is recorded, including
+ acceleration, roll, pitch, yaw, etc.
+ This experimental data is then used to build a model of the helicopter
+ dynamics, to allow automatic control of the helicopter.
+ The dynamic model representation varies depending on the particular application.
+ One example is to model the helicopter dynamics using a neural network
+ 
+\begin_inset CommandInset citation
+LatexCommand cite
+key "6_system_id_nn"
+
+\end_inset
+
+.
+\end_layout
+
+\begin_layout Standard
+One of the weaknesses of using a system identification approach for a robot
+ to model an object is it does not incorporate a feedback mechanism between
+ the results of an experiment and the choice of the next experiment to carry
+ out.
+ Typically a predetermined list of experiments is performed to gather data,
+ and a model is then fitted to the results.
+ A better approach is for the choice of the next experiment to be based
+ on the results of the previous experiments.
+\end_layout
+
+\begin_layout Subsection*
+Improvements
+\end_layout
+
+\begin_layout Standard
+In Chapter 6 we present a method for a robot to autonomously learn the propertie
+s of an object using active interaction.
+ This work was published at the 2012 International Conference on Intelligent
+ Robots and Systems (IROS) 
+\begin_inset CommandInset citation
+LatexCommand cite
+key "sushkov_active_robot_learning"
+
+\end_inset
+
+.
+ We use a physics simulator to model the object, as well as to generate
+ hypotheses about an object’s properties and predictions of the outcome
+ of a given robot action.
+ When the robot performs an experiment, we update the confidence distribution
+ over the object properties and choose the next actions based on this distributi
+on to maximise the information gained.
+ By doing this we improve on the existing methods in several ways.
+ First, by using a physics simulator representation of the object model,
+ we gain a level of generality for the model.
+ A learned model should be able to describe the behaviour of the object
+ in a number of different situations, distinct from the learning environment.
+ Second, we use the physics simulator to simulate the potential outcome
+ of different experiments and actions, which allows the robot to choose
+ the most informative experiment to perform.
+ This minimises the number of actions required to learn an accurate model
+ of the object.
+\end_layout
+
+\end_body
+\end_document

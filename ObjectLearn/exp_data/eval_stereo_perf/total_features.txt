@@ -1,0 +1,7 @@
+cat:34
+cow:29
+dog:33
+pony:28
+ship:32
+skydivers:32
+total:188

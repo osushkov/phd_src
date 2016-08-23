@@ -1,0 +1,7 @@
+I logged the scale of all SIFT features in a number of 
+scenarios. I aggregated the occurance of different scale 
+SIFT features into 128 "bins". Each bin is of width 0.25 
+and together they span the scales from 0 to 32.
+Each file contains the aggregate list of the bin counts 
+for a scenario. The bin aggregates are in increasing 
+order of scale.

@@ -1,0 +1,494 @@
+<?xml version="1.0"?>
+<grace version="59901" xmlns:grace="http://plasma-gate.weizmann.ac.il/Grace/">
+ <!-- Description -->
+ <description>
+  <text/>
+ </description>
+ <!-- Definitions -->
+ <definitions>
+  <!-- Color map -->
+  <colormap>
+   <color-def id="0" rgb="#ffffff" name="white"/>
+   <color-def id="1" rgb="#000000" name="black"/>
+   <color-def id="2" rgb="#ff0000" name="red"/>
+   <color-def id="3" rgb="#00ff00" name="green"/>
+   <color-def id="4" rgb="#0000ff" name="blue"/>
+   <color-def id="5" rgb="#ffff00" name="yellow"/>
+   <color-def id="6" rgb="#bc8f8f" name="brown"/>
+   <color-def id="7" rgb="#dcdcdc" name="grey"/>
+   <color-def id="8" rgb="#9400d3" name="violet"/>
+   <color-def id="9" rgb="#00ffff" name="cyan"/>
+   <color-def id="10" rgb="#ff00ff" name="magenta"/>
+   <color-def id="11" rgb="#ffa500" name="orange"/>
+   <color-def id="12" rgb="#7221bc" name="indigo"/>
+   <color-def id="13" rgb="#670748" name="maroon"/>
+   <color-def id="14" rgb="#40e0d0" name="turquoise"/>
+   <color-def id="15" rgb="#008b00" name="green4"/>
+  </colormap>
+  <!-- Font map -->
+  <fontmap>
+   <font-def id="0" name="Times-Roman" fallback="Times-Roman"/>
+   <font-def id="1" name="Times-Italic" fallback="Times-Italic"/>
+   <font-def id="2" name="Times-Bold" fallback="Times-Bold"/>
+   <font-def id="3" name="Times-BoldItalic" fallback="Times-BoldItalic"/>
+   <font-def id="4" name="Helvetica" fallback="Helvetica"/>
+   <font-def id="5" name="Helvetica-Oblique" fallback="Helvetica-Oblique"/>
+   <font-def id="6" name="Helvetica-Bold" fallback="Helvetica-Bold"/>
+   <font-def id="7" name="Helvetica-BoldOblique" fallback="Helvetica-BoldOblique"/>
+   <font-def id="8" name="Courier" fallback="Courier"/>
+   <font-def id="9" name="Courier-Oblique" fallback="Courier-Oblique"/>
+   <font-def id="10" name="Courier-Bold" fallback="Courier-Bold"/>
+   <font-def id="11" name="Courier-BoldOblique" fallback="Courier-BoldOblique"/>
+   <font-def id="12" name="Symbol" fallback="Symbol"/>
+   <font-def id="13" name="ZapfDingbats" fallback="ZapfDingbats"/>
+  </fontmap>
+  <!-- Size scales -->
+  <scales font-size="0.028" line-width="0.0015"/>
+ </definitions>
+ <!-- Page properties -->
+ <page width="842" height="595" fill="yes" color-id="0"/>
+ <!-- Data formats -->
+ <data-formats>
+  <world prec="8"/>
+  <dates reference="0" wrap="no" wrap-year="1950"/>
+ </data-formats>
+ <frame id="frame" active="yes" type="closed">
+  <viewport xmin="0.15" xmax="1.25" ymin="0.15" ymax="0.85"/>
+  <line-spec color-id="1" pattern-id="1" style-id="1" width="1"/>
+  <fill-spec color-id="0" pattern-id="0"/>
+  <legend active="yes" length="0.04" vgap="0.01" hgap="0.01" single-symbol="no" invert="no">
+   <face-spec font-id="0" color-id="1" char-size="1"/>
+   <legframe anchor="(1, 1)" offset="(-0.05, -0.05)" hjust="right" vjust="top">
+    <line-spec color-id="1" pattern-id="1" style-id="1" width="1"/>
+    <fill-spec color-id="0" pattern-id="1"/>
+   </legframe>
+  </legend>
+  <graph id="graph" active="yes">
+   <presentation-spec type="xy" stacked="no" bargap="0"/>
+   <xscale min="0" max="200" type="normal" invert="no"/>
+   <yscale min="0" max="40000" type="normal" invert="no"/>
+   <zscale norm="1"/>
+   <locator type="xy">
+    <fixedpoint active="no" x="0" y="0"/>
+    <xformat type="general" prec="6" format-string=""/>
+    <yformat type="general" prec="6" format-string=""/>
+   </locator>
+   <agrid id="x_axisgrid" active="yes" type="x" major-step="50" minor-divisions="1" auto-ticking="6" rounded-position="yes">
+    <major-gridlines active="no">
+     <line-spec color-id="1" pattern-id="1" style-id="1" width="1"/>
+    </major-gridlines>
+    <minor-gridlines active="no">
+     <line-spec color-id="1" pattern-id="1" style-id="1" width="1"/>
+    </minor-gridlines>
+    <userticks type="none"/>
+    <axisbar>
+     <line-spec color-id="1" pattern-id="1" style-id="1" width="1"/>
+    </axisbar>
+    <major-tickmarks size="1" inout-placement="in">
+     <line-spec color-id="1" pattern-id="1" style-id="1" width="1"/>
+    </major-tickmarks>
+    <minor-tickmarks size="0.5" inout-placement="in">
+     <line-spec color-id="1" pattern-id="1" style-id="1" width="1"/>
+    </minor-tickmarks>
+    <ticklabels transform="" prepend="" append="" offset="(0, 0.01)" skip="0" stagger="0" start="auto" stop="auto">
+     <text-properties angle="0" hjust="left" vjust="baseline">
+      <face-spec font-id="0" color-id="1" char-size="1"/>
+     </text-properties>
+     <format type="general" prec="5" format-string=""/>
+    </ticklabels>
+    <axis id="normal" active="yes" position="normal" offset="0" bar="yes" ticks="yes" labels="yes">
+     <atext id="label" active="no" offset="(0, -0.01)">
+      <location x="0.5" y="0"/>
+      <text-properties angle="0" hjust="center" vjust="top">
+       <face-spec font-id="0" color-id="1" char-size="1"/>
+      </text-properties>
+      <text><![CDATA[X label]]></text>
+      <text-frame type="none" offset="0.005">
+       <line-spec color-id="1" pattern-id="1" style-id="1" width="1"/>
+       <fill-spec color-id="0" pattern-id="0"/>
+      </text-frame>
+      <pointer active="no">
+       <arrow type="line" length="1" dl-ff="1" ll-ff="0"/>
+      </pointer>
+     </atext>
+    </axis>
+    <axis id="opposite" active="yes" position="opposite" offset="0" bar="yes" ticks="yes" labels="no">
+    </axis>
+   </agrid>
+   <agrid id="y_axisgrid" active="yes" type="y" major-step="10000" minor-divisions="1" auto-ticking="6" rounded-position="yes">
+    <major-gridlines active="no">
+     <line-spec color-id="1" pattern-id="1" style-id="1" width="1"/>
+    </major-gridlines>
+    <minor-gridlines active="no">
+     <line-spec color-id="1" pattern-id="1" style-id="1" width="1"/>
+    </minor-gridlines>
+    <userticks type="none"/>
+    <axisbar>
+     <line-spec color-id="1" pattern-id="1" style-id="1" width="1"/>
+    </axisbar>
+    <major-tickmarks size="1" inout-placement="in">
+     <line-spec color-id="1" pattern-id="1" style-id="1" width="1"/>
+    </major-tickmarks>
+    <minor-tickmarks size="0.5" inout-placement="in">
+     <line-spec color-id="1" pattern-id="1" style-id="1" width="1"/>
+    </minor-tickmarks>
+    <ticklabels transform="" prepend="" append="" offset="(0, 0.01)" skip="0" stagger="0" start="auto" stop="auto">
+     <text-properties angle="0" hjust="left" vjust="baseline">
+      <face-spec font-id="0" color-id="1" char-size="1"/>
+     </text-properties>
+     <format type="general" prec="5" format-string=""/>
+    </ticklabels>
+    <axis id="normal" active="yes" position="normal" offset="0" bar="yes" ticks="yes" labels="yes">
+     <atext id="label" active="no" offset="(-0.01, 0)">
+      <location x="0" y="0.5"/>
+      <text-properties angle="90" hjust="right" vjust="middle">
+       <face-spec font-id="0" color-id="1" char-size="1"/>
+      </text-properties>
+      <text><![CDATA[Y label]]></text>
+      <text-frame type="none" offset="0.005">
+       <line-spec color-id="1" pattern-id="1" style-id="1" width="1"/>
+       <fill-spec color-id="0" pattern-id="0"/>
+      </text-frame>
+      <pointer active="no">
+       <arrow type="line" length="1" dl-ff="1" ll-ff="0"/>
+      </pointer>
+     </atext>
+    </axis>
+    <axis id="opposite" active="yes" position="opposite" offset="0" bar="yes" ticks="yes" labels="no">
+    </axis>
+   </agrid>
+   <ssd id="/home/osushkov/Kodiak/trunk/Oleg/ObjectLearn/exp_data/sift_scale_distribution/arm_box.dat" active="yes" rows="128" indexed="no">
+    <dcolumn label="">
+     <c>1</c>
+     <c>2</c>
+     <c>3</c>
+     <c>4</c>
+     <c>5</c>
+     <c>6</c>
+     <c>7</c>
+     <c>8</c>
+     <c>9</c>
+     <c>10</c>
+     <c>11</c>
+     <c>12</c>
+     <c>13</c>
+     <c>14</c>
+     <c>15</c>
+     <c>16</c>
+     <c>17</c>
+     <c>18</c>
+     <c>19</c>
+     <c>20</c>
+     <c>21</c>
+     <c>22</c>
+     <c>23</c>
+     <c>24</c>
+     <c>25</c>
+     <c>26</c>
+     <c>27</c>
+     <c>28</c>
+     <c>29</c>
+     <c>30</c>
+     <c>31</c>
+     <c>32</c>
+     <c>33</c>
+     <c>34</c>
+     <c>35</c>
+     <c>36</c>
+     <c>37</c>
+     <c>38</c>
+     <c>39</c>
+     <c>40</c>
+     <c>41</c>
+     <c>42</c>
+     <c>43</c>
+     <c>44</c>
+     <c>45</c>
+     <c>46</c>
+     <c>47</c>
+     <c>48</c>
+     <c>49</c>
+     <c>50</c>
+     <c>51</c>
+     <c>52</c>
+     <c>53</c>
+     <c>54</c>
+     <c>55</c>
+     <c>56</c>
+     <c>57</c>
+     <c>58</c>
+     <c>59</c>
+     <c>60</c>
+     <c>61</c>
+     <c>62</c>
+     <c>63</c>
+     <c>64</c>
+     <c>65</c>
+     <c>66</c>
+     <c>67</c>
+     <c>68</c>
+     <c>69</c>
+     <c>70</c>
+     <c>71</c>
+     <c>72</c>
+     <c>73</c>
+     <c>74</c>
+     <c>75</c>
+     <c>76</c>
+     <c>77</c>
+     <c>78</c>
+     <c>79</c>
+     <c>80</c>
+     <c>81</c>
+     <c>82</c>
+     <c>83</c>
+     <c>84</c>
+     <c>85</c>
+     <c>86</c>
+     <c>87</c>
+     <c>88</c>
+     <c>89</c>
+     <c>90</c>
+     <c>91</c>
+     <c>92</c>
+     <c>93</c>
+     <c>94</c>
+     <c>95</c>
+     <c>96</c>
+     <c>97</c>
+     <c>98</c>
+     <c>99</c>
+     <c>100</c>
+     <c>101</c>
+     <c>102</c>
+     <c>103</c>
+     <c>104</c>
+     <c>105</c>
+     <c>106</c>
+     <c>107</c>
+     <c>108</c>
+     <c>109</c>
+     <c>110</c>
+     <c>111</c>
+     <c>112</c>
+     <c>113</c>
+     <c>114</c>
+     <c>115</c>
+     <c>116</c>
+     <c>117</c>
+     <c>118</c>
+     <c>119</c>
+     <c>120</c>
+     <c>121</c>
+     <c>122</c>
+     <c>123</c>
+     <c>124</c>
+     <c>125</c>
+     <c>126</c>
+     <c>127</c>
+     <c>128</c>
+    </dcolumn>
+    <dcolumn label="">
+     <c>0</c>
+     <c>0</c>
+     <c>0</c>
+     <c>17855</c>
+     <c>39602</c>
+     <c>22783</c>
+     <c>21757</c>
+     <c>6303</c>
+     <c>7634</c>
+     <c>8171</c>
+     <c>9010</c>
+     <c>3407</c>
+     <c>2991</c>
+     <c>2639</c>
+     <c>282</c>
+     <c>355</c>
+     <c>1443</c>
+     <c>796</c>
+     <c>570</c>
+     <c>3278</c>
+     <c>1249</c>
+     <c>978</c>
+     <c>535</c>
+     <c>404</c>
+     <c>292</c>
+     <c>327</c>
+     <c>360</c>
+     <c>779</c>
+     <c>939</c>
+     <c>711</c>
+     <c>581</c>
+     <c>279</c>
+     <c>372</c>
+     <c>320</c>
+     <c>328</c>
+     <c>197</c>
+     <c>129</c>
+     <c>177</c>
+     <c>289</c>
+     <c>377</c>
+     <c>866</c>
+     <c>1873</c>
+     <c>241</c>
+     <c>81</c>
+     <c>34</c>
+     <c>6</c>
+     <c>6</c>
+     <c>10</c>
+     <c>26</c>
+     <c>17</c>
+     <c>35</c>
+     <c>11</c>
+     <c>14</c>
+     <c>6</c>
+     <c>9</c>
+     <c>12</c>
+     <c>33</c>
+     <c>1</c>
+     <c>3</c>
+     <c>56</c>
+     <c>16</c>
+     <c>25</c>
+     <c>77</c>
+     <c>76</c>
+     <c>30</c>
+     <c>18</c>
+     <c>31</c>
+     <c>43</c>
+     <c>30</c>
+     <c>10</c>
+     <c>5</c>
+     <c>8</c>
+     <c>54</c>
+     <c>8</c>
+     <c>7</c>
+     <c>35</c>
+     <c>21</c>
+     <c>28</c>
+     <c>16</c>
+     <c>60</c>
+     <c>11</c>
+     <c>16</c>
+     <c>21</c>
+     <c>48</c>
+     <c>38</c>
+     <c>43</c>
+     <c>28</c>
+     <c>52</c>
+     <c>22</c>
+     <c>35</c>
+     <c>69</c>
+     <c>22</c>
+     <c>2</c>
+     <c>0</c>
+     <c>0</c>
+     <c>0</c>
+     <c>0</c>
+     <c>0</c>
+     <c>0</c>
+     <c>0</c>
+     <c>0</c>
+     <c>0</c>
+     <c>0</c>
+     <c>0</c>
+     <c>0</c>
+     <c>0</c>
+     <c>0</c>
+     <c>0</c>
+     <c>0</c>
+     <c>0</c>
+     <c>0</c>
+     <c>0</c>
+     <c>0</c>
+     <c>0</c>
+     <c>0</c>
+     <c>0</c>
+     <c>0</c>
+     <c>0</c>
+     <c>0</c>
+     <c>0</c>
+     <c>0</c>
+     <c>0</c>
+     <c>0</c>
+     <c>0</c>
+     <c>0</c>
+     <c>0</c>
+     <c>0</c>
+     <c>0</c>
+    </dcolumn>
+    <set id="0x7edad0" active="yes" type="xy" skip="0" skipmindist="0">
+     <dataset x="0" y="1"/>
+     <symbol type="none" size="1" char="65" font-id="0">
+      <line-spec color-id="1" pattern-id="1" style-id="1" width="1"/>
+      <fill-spec color-id="1" pattern-id="0"/>
+     </symbol>
+     <line type="straight" fill-type="none" fill-rule="winding" baseline-type="zero" draw-baseline="no" draw-droplines="no">
+      <line-spec color-id="1" pattern-id="1" style-id="1" width="1"/>
+      <fill-spec color-id="0" pattern-id="0"/>
+     </line>
+     <annotation active="no" offset="(0, 0)" prepend="" append="">
+      <text-properties angle="0" hjust="center" vjust="bottom">
+       <face-spec font-id="0" color-id="1" char-size="1"/>
+      </text-properties>
+      <format type="general" prec="3" format-string=""/>
+     </annotation>
+     <errorbar active="no">
+      <barline size="1">
+       <line-spec color-id="1" pattern-id="1" style-id="1" width="1"/>
+      </barline>
+      <riserline arrow-clip="no" clip-length="0.1">
+       <line-spec color-id="1" pattern-id="1" style-id="1" width="1"/>
+      </riserline>
+     </errorbar>
+     <legend-entry>
+      <text/>
+     </legend-entry>
+    </set>
+   </ssd>
+  </graph>
+  <atext id="title" active="no" offset="(0, 0.06)">
+   <location x="0.5" y="1"/>
+   <text-properties angle="0" hjust="left" vjust="baseline">
+    <face-spec font-id="0" color-id="1" char-size="1.5"/>
+   </text-properties>
+   <text><![CDATA[SIFT Scale Distribution]]></text>
+   <text-frame type="none" offset="0.005">
+    <line-spec color-id="1" pattern-id="1" style-id="1" width="1"/>
+    <fill-spec color-id="0" pattern-id="0"/>
+   </text-frame>
+   <pointer active="no">
+    <arrow type="line" length="1" dl-ff="1" ll-ff="0"/>
+   </pointer>
+  </atext>
+  <atext id="subtitle" active="no" offset="(0, 0.02)">
+   <location x="0.5" y="1"/>
+   <text-properties angle="0" hjust="left" vjust="baseline">
+    <face-spec font-id="0" color-id="1" char-size="1"/>
+   </text-properties>
+   <text><![CDATA[Subtitle]]></text>
+   <text-frame type="none" offset="0.005">
+    <line-spec color-id="1" pattern-id="1" style-id="1" width="1"/>
+    <fill-spec color-id="0" pattern-id="0"/>
+   </text-frame>
+   <pointer active="no">
+    <arrow type="line" length="1" dl-ff="1" ll-ff="0"/>
+   </pointer>
+  </atext>
+ </frame>
+ <atext id="timestamp" active="no" offset="(0, 0)">
+  <location x="0.03" y="0.03"/>
+  <text-properties angle="0" hjust="left" vjust="baseline">
+   <face-spec font-id="0" color-id="1" char-size="1"/>
+  </text-properties>
+  <text><![CDATA[\${timestamp}]]></text>
+  <text-frame type="none" offset="0">
+   <line-spec color-id="1" pattern-id="1" style-id="1" width="1"/>
+   <fill-spec color-id="0" pattern-id="0"/>
+  </text-frame>
+  <pointer active="no">
+   <arrow type="line" length="0" dl-ff="0" ll-ff="0"/>
+  </pointer>
+ </atext>
+</grace>

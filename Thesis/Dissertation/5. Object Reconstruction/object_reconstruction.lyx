@@ -1,0 +1,4755 @@
+#LyX 2.0 created this file. For more info see http://www.lyx.org/
+\lyxformat 413
+\begin_document
+\begin_header
+\textclass report
+\use_default_options true
+\master ../main.lyx
+\maintain_unincluded_children false
+\language english
+\language_package default
+\inputencoding auto
+\fontencoding global
+\font_roman default
+\font_sans default
+\font_typewriter default
+\font_default_family default
+\use_non_tex_fonts false
+\font_sc false
+\font_osf false
+\font_sf_scale 100
+\font_tt_scale 100
+
+\graphics default
+\default_output_format default
+\output_sync 0
+\bibtex_command default
+\index_command default
+\paperfontsize default
+\spacing single
+\use_hyperref false
+\papersize default
+\use_geometry false
+\use_amsmath 1
+\use_esint 1
+\use_mhchem 1
+\use_mathdots 1
+\cite_engine basic
+\use_bibtopic false
+\use_indices false
+\paperorientation portrait
+\suppress_date false
+\use_refstyle 1
+\index Index
+\shortcut idx
+\color #008000
+\end_index
+\secnumdepth 3
+\tocdepth 3
+\paragraph_separation indent
+\paragraph_indentation default
+\quotes_language english
+\papercolumns 1
+\papersides 1
+\paperpagestyle default
+\tracking_changes false
+\output_changes false
+\html_math_output 0
+\html_css_as_file 0
+\html_be_strict false
+\end_header
+
+\begin_body
+
+\begin_layout Standard
+\begin_inset Newpage cleardoublepage
+\end_inset
+
+
+\end_layout
+
+\begin_layout Chapter
+Object Reconstruction
+\end_layout
+
+\begin_layout Section
+Introduction
+\end_layout
+
+\begin_layout Standard
+In Chapter 3 we presented a method for matching the SIFT features of a single
+ view of an object to a set of scene features for object recognition.
+ In Chapter 4 we presented a method for a robot to autonomously learn the
+ SIFT features of a single aspect of an object by using motion and feature
+ tracking.
+ In this chapter we combine these methods to build an all-aspect appearance
+ model of the object and reconstruct its 3D shape.
+ This is the next step in the overall process of a robot autonomously learning
+ to recognise an object, learning it's shape and physical properties, and
+ using this knowledge to accomplish a task.
+\end_layout
+
+\begin_layout Standard
+We present a system that combines the feature segmentation and matching
+ methods (described in the previous two chapters) with object reconstruction
+ techniques to extract a complete 3D object model.
+ The model includes the 3D shape and the full aspect graph of SIFT features
+ of the object.
+ This model will enable the robot to recognise and localise the object in
+ a scene in different orientations.
+ Additionally, knowing the shape of the object allows the robot to use this
+ model for manipulation and grasp planning.
+\end_layout
+
+\begin_layout Standard
+To build the object appearance and shape model, we switched from the stereo
+ camera used in the previous chapter to use a RGB-D (colour and depth) Kinect
+ camera.
+ This sensor provided much higher resolution depth information than we could
+ achieve with the stereo camera.
+ The hardware platform is described in Section 
+\begin_inset CommandInset ref
+LatexCommand ref
+reference "sec:Hardware-Platform"
+
+\end_inset
+
+.
+ The colour and depth data is combined with robot induced object motion,
+ to separate the object image region from the background.
+ We then stitch together the different views into a single coherent model.
+ The object segmentation is based on the method described in Chapter 4.
+ The robot grasps an object and moves it through the scene in a linear motion.
+ The object is slowly rotated during the course of the motion so that different
+ aspects of the object are visible to the robot's camera.
+ During the course of this motion, the robot tracks the scene SIFT features,
+ builds a trajectory of each, and periodically performs snapshots of the
+ features that have moved over a threshold amount.
+ These snapshot data are used to extract an object-view, consisting of the
+ SIFT features and a surface point cloud of the object as viewed from a
+ single direction (described in Section 
+\begin_inset CommandInset ref
+LatexCommand ref
+reference "sec:Generating-Object-Views"
+
+\end_inset
+
+).
+ Multiple object-views are extracted as the robot moves and rotates the
+ object, viewing it from multiple directions.
+ The resulting views are stitched together (described in Section 
+\begin_inset CommandInset ref
+LatexCommand ref
+reference "sec:Combining-Views"
+
+\end_inset
+
+) to form a single coherent model, encompassing all 
+\begin_inset Formula $360\textdegree$
+\end_inset
+
+ of the object.
+ The model consists of a set of SIFT feature snapshots, covering different
+ viewing directions and a surface point cloud describing the shape of the
+ object.
+ A geometric model is fitted to the point cloud (described in Section 
+\begin_inset CommandInset ref
+LatexCommand ref
+reference "sec:Shape-Fitting"
+
+\end_inset
+
+) to provide a compact description of the object's shape.
+ This resulting object appearance model can then be used for recognising
+ and localising the object in a scene (described in Section 
+\begin_inset CommandInset ref
+LatexCommand ref
+reference "sec:Object-Recognition"
+
+\end_inset
+
+).
+ Figure 
+\begin_inset CommandInset ref
+LatexCommand ref
+reference "fig:top-level-appearance-system"
+
+\end_inset
+
+ summarises the steps involved in the object reconstruction system.
+\end_layout
+
+\begin_layout Standard
+\begin_inset Float figure
+wide false
+sideways false
+status collapsed
+
+\begin_layout Plain Layout
+\align center
+\begin_inset Graphics
+	filename images/overview.png
+	width 100text%
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Plain Layout
+\begin_inset Caption
+
+\begin_layout Plain Layout
+\begin_inset Argument
+status open
+
+\begin_layout Plain Layout
+Object reconstruction system overview.
+\end_layout
+
+\end_inset
+
+A top level overview of our object appearance and shape reconstruction system.
+\begin_inset CommandInset label
+LatexCommand label
+name "fig:top-level-appearance-system"
+
+\end_inset
+
+
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Section
+Hardware Platform
+\begin_inset CommandInset label
+LatexCommand label
+name "sec:Hardware-Platform"
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+The hardware platform for this system is similar to the one used in the
+ previous chapter.
+ It consists of a six degrees of freedom robot arm mounted on a metal spine
+ on a table.
+ The robot arm is equipped with a two-fingered gripper (see Section 
+\begin_inset CommandInset ref
+LatexCommand ref
+reference "sec:Robot-Platform"
+
+\end_inset
+
+).
+\end_layout
+
+\begin_layout Standard
+One of the aims of the object reconstruction system is to determine the
+ 3D shape of the object.
+ To do this we replaced the Bumblebee2 stereo camera, used in the previous
+ chapter, with a Kinect RGB-D camera system (see Figure 
+\begin_inset CommandInset ref
+LatexCommand ref
+reference "fig:Kinect-RGB-D-camera"
+
+\end_inset
+
+).
+ The advantage of using the Kinect over a stereo camera is that it provides
+ accurate real-time depth information for each pixel without needing to
+ compute a dense correspondence between left and right stereo images.
+ We use the per-pixel depth data to construct a dense point cloud of the
+ surface of the object.
+\end_layout
+
+\begin_layout Standard
+The Kinect camera features a standard RGB camera that outputs colour images
+ with a resolution of 
+\begin_inset Formula $640\times480$
+\end_inset
+
+ pixels at a rate of 
+\begin_inset Formula $30$
+\end_inset
+
+ frames per second.
+ Additionally, the Kinect has a depth sensor that outputs a 
+\begin_inset Formula $640\times480$
+\end_inset
+
+ pixel resolution depth image at a rate of 
+\begin_inset Formula $30$
+\end_inset
+
+ frames per second.
+ This depth image consists of 11-bit values for each pixel, signifying the
+ distance of the scene from the camera at that point.
+ To generate the depth image, the Kinect uses an infra-red laser projector
+ to project a structured grid of points onto the scene, which is then viewed
+ through an infra-red camera.
+ The pattern of infra-red light is used to determine the depth of the scene
+ at each pixel (see Figure 
+\begin_inset CommandInset ref
+LatexCommand ref
+reference "fig:kinect-function"
+
+\end_inset
+
+).
+\end_layout
+
+\begin_layout Standard
+\begin_inset Float figure
+wide false
+sideways false
+status open
+
+\begin_layout Plain Layout
+\align center
+\begin_inset Graphics
+	filename images/kinect.jpg
+	width 50text%
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Plain Layout
+\begin_inset Caption
+
+\begin_layout Plain Layout
+\begin_inset Argument
+status open
+
+\begin_layout Plain Layout
+Kinect camera sensor.
+\end_layout
+
+\end_inset
+
+Kinect RGB-D camera mounted on a pan-tilt servo pair.
+ This is located on the 
+\begin_inset Quotes eld
+\end_inset
+
+neck
+\begin_inset Quotes erd
+\end_inset
+
+ of the robot, allowing the Kinect sensor to look down to observe the workspace,
+ robot gripper, and object.
+\begin_inset CommandInset label
+LatexCommand label
+name "fig:Kinect-RGB-D-camera"
+
+\end_inset
+
+
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Plain Layout
+
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+\begin_inset Float figure
+wide false
+sideways false
+status open
+
+\begin_layout Plain Layout
+\align center
+\begin_inset Graphics
+	filename images/kinect_ir.png
+	width 50text%
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Plain Layout
+\align center
+\begin_inset Graphics
+	filename images/kinect_depth.jpg
+	width 50text%
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Plain Layout
+\begin_inset Caption
+
+\begin_layout Plain Layout
+\begin_inset Argument
+status open
+
+\begin_layout Plain Layout
+Kinect sensor projected light and depth-map.
+\end_layout
+
+\end_inset
+
+Top: the Kinect projects a structured pattern onto the scene in infra-red
+ (image courtesy of 
+\size footnotesize
+http://graphics.stanford.edu/~mdfisher/Kinect.html
+\size default
+).
+ Bottom: the resulting per-pixel depth information is expressed in grey
+ scale, darker pixels representing areas closer to the camera.
+ Pixels that are black have no valid depth information (image courtesy of
+ 
+\size footnotesize
+http://www.brekel.com/wp-content/uploads/2010/12/kinect-3D-scanner-capture-depth.jp
+g
+\size default
+).
+ 
+\begin_inset CommandInset label
+LatexCommand label
+name "fig:kinect-function"
+
+\end_inset
+
+
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Plain Layout
+
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Section
+Generating Object-Views
+\begin_inset CommandInset label
+LatexCommand label
+name "sec:Generating-Object-Views"
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+In this section we extend the concept of object feature snapshots (introduced
+ in the previous chapter) to form an object-view.
+ In addition to SIFT features, an object-view also includes a dense surface
+ point cloud of the object as viewed from a given direction.
+\end_layout
+
+\begin_layout Standard
+In Chapter 4 we presented a method for generating object SIFT feature snapshots
+ consisting of the features visible from a single aspect.
+ Object features are separated from the background by having the robot move
+ the object through the scene and track the resulting feature motion.
+ The SIFT features are tracked in 3D world space using a stereo camera.
+ Those that follow a similar trajectory to the robot gripper are labelled
+ as object features.
+ 
+\end_layout
+
+\begin_layout Standard
+A single snapshot provides both appearance and shape information of a single
+ aspect of the object.
+ The SIFT features encapsulate the appearance information, allowing the
+ object to be recognised and localised in a scene by using the feature matching
+ approach presented in Chapter 3.
+ The 3D positions of the snapshot SIFT features also provide information
+ about the shape of the object, forming a point cloud of its surface.
+\end_layout
+
+\begin_layout Standard
+The main weakness of using only the SIFT features for shape information
+ is the potentially sparse nature of the point cloud.
+ Plain untextured image regions will not produce many SIFT features 
+\begin_inset CommandInset citation
+LatexCommand cite
+key "3_Lowe_sift"
+
+\end_inset
+
+.
+ This results in little shape information in untextured areas of the object.
+ To address this problem, we replace the stereo camera with a Kinect depth
+ camera.
+ The Kinect camera, in addition to a standard RGB image, outputs a per pixel
+ depth value.
+ This allows the robot to construct a dense surface point cloud of the object,
+ independent of the object's appearance.
+ This process is represented in Figure 
+\begin_inset CommandInset ref
+LatexCommand ref
+reference "fig:object-view-process"
+
+\end_inset
+
+.
+ In this section we describe the modifications to the object snapshotting
+ method introduced in Chapter 4.
+ First we describe the changes required to move from a stereo camera to
+ a Kinect depth camera.
+ We then outline the method used to extract the object and arm surface point
+ cloud, in addition to the SIFT features and how to separate the arm and
+ object regions of the point cloud.
+ In later sections, we describe how the individual object-views are stitched
+ together to form a complete all-aspect object appearance and shape model.
+\end_layout
+
+\begin_layout Standard
+\begin_inset Float figure
+wide false
+sideways false
+status open
+
+\begin_layout Plain Layout
+\align center
+\begin_inset Graphics
+	filename images/object_view.jpg
+	width 100text%
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Plain Layout
+\begin_inset Caption
+
+\begin_layout Plain Layout
+\begin_inset Argument
+status open
+
+\begin_layout Plain Layout
+Object view extraction.
+\end_layout
+
+\end_inset
+
+The process of extracting an object-view.
+ The object is moved through the scene and its SIFT features are tracked
+ in 3D world space (top left, and top right).
+ We then take a snapshot, separating the object and arm features from the
+ background.
+ The image regions that correspond to the object and arm are extracted by
+ performing a flood fill over the depth image (bottom right).
+ The resulting object-view consist of the object's SIFT features (blue dots
+ in the bottom right), and the object's dense surface point cloud (bottom
+ left).
+\begin_inset CommandInset label
+LatexCommand label
+name "fig:object-view-process"
+
+\end_inset
+
+
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Plain Layout
+
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Subsection
+RGB- Image
+\end_layout
+
+\begin_layout Standard
+\begin_inset Note Note
+status open
+
+\begin_layout Plain Layout
+mention how the RGB and depth images are combined.
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+In Chapter 4 we presented a method using a stereo camera to determine the
+ 3D position of each SIFT feature by correlating features in the left and
+ right images.
+ In the case of a RGB-D camera, each pixel has an associated depth value,
+ along with the colour RGB values.
+ We extract the SIFT features using the RGB colour image, and to find the
+ 3D positions we use the depth values of the pixels on which the features
+ are centered.
+ We project a ray out of the camera's image plane a distance indicated by
+ the pixel's depth value.
+ The resulting point is the 3D world position of the feature.
+ This is illustrated in Figure 
+\begin_inset CommandInset ref
+LatexCommand ref
+reference "fig:pixel-project"
+
+\end_inset
+
+.
+\end_layout
+
+\begin_layout Standard
+\begin_inset Float figure
+wide false
+sideways false
+status open
+
+\begin_layout Plain Layout
+\align center
+\begin_inset Graphics
+	filename images/pixel_project.png
+	width 70text%
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Plain Layout
+\begin_inset Caption
+
+\begin_layout Plain Layout
+\begin_inset Argument
+status open
+
+\begin_layout Plain Layout
+Finding world coordinates of a depth-map pixel.
+\end_layout
+
+\end_inset
+
+To find the world space position of a feature or a point on the surface
+ of an object, we take the distance 
+\series bold
+d 
+\series default
+associated with the feature's pixel and project a ray out of the camera's
+ image plane into the scene.
+ The end-point of the ray corresponds to the 3D world space position of
+ the feature.
+\begin_inset CommandInset label
+LatexCommand label
+name "fig:pixel-project"
+
+\end_inset
+
+
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Plain Layout
+
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Subsection
+Arm and Object Surface Point Cloud
+\end_layout
+
+\begin_layout Standard
+As the robot moves the object through the scene, it periodically performs
+ feature snapshots.
+ This consists of features that have moved more than a threshold distance
+ and follow a similar trajectory to the arm end point.
+ These features correspond to the held object and robot arm.
+ This process was presented in detail in the previous chapter.
+ We now use the dense depth information provided by an RGB-D sensor to perform
+ further processing and extract the arm and object surface point clouds
+ for each snapshot.
+ 
+\end_layout
+
+\begin_layout Standard
+When a snapshot is obtained, we use the SIFT features as seed points for
+ region growing segmentation to extract the arm and object surface point
+ cloud.
+ To do this we make use of the following assumptions:
+\end_layout
+
+\begin_layout Itemize
+the snapshot SIFT features are located on the robot arm or target object's
+ surface;
+\end_layout
+
+\begin_layout Itemize
+the surface of the viewed aspect of the robot arm and target object is mostly
+ continuous and smooth;
+\end_layout
+
+\begin_layout Itemize
+no background objects or surfaces are in contact with the target object
+ or arm.
+\end_layout
+
+\begin_layout Standard
+We use the snapshot scene depth image to segment the object and arm image
+ regions from the background.
+ This is done by performing an eight-neighbour flood fill starting at every
+ snapshot SIFT feature.
+ The flood fill is performed over the depth image, with a neighbouring pixel
+ being filled if its depth value is within a small threshold distance of
+ the current pixel.
+ We used a threshold of 
+\begin_inset Formula $0.5cm$
+\end_inset
+
+, this is equal to the 95th percentile precision of the Kinect RGB-D sensor
+\begin_inset Foot
+status open
+
+\begin_layout Plain Layout
+http://www.ros.org/wiki/openni_kinect/kinect_accuracy
+\end_layout
+
+\end_inset
+
+.
+ All pixels that are filled are then labelled as arm/object pixels.
+ These pixels, with their associated depth values, form a surface point
+ cloud of the arm and object.
+ This process is summarised in Algorithm 
+\begin_inset CommandInset ref
+LatexCommand ref
+reference "alg:region-growing"
+
+\end_inset
+
+ and Figure 
+\begin_inset CommandInset ref
+LatexCommand ref
+reference "fig:region-growing"
+
+\end_inset
+
+.
+ The result of this process is a set of SIFT features and a surface point
+ cloud of the robot arm and the held object.
+ The next step is to separate the object and arm features and surface points.
+\end_layout
+
+\begin_layout Standard
+\begin_inset Float algorithm
+wide false
+sideways false
+status open
+
+\begin_layout Plain Layout
+
+\series bold
+input:
+\series default
+ snapshot features 
+\begin_inset Formula $\rightarrow S$
+\end_inset
+
+
+\end_layout
+
+\begin_layout Plain Layout
+
+\series bold
+input:
+\series default
+ snapshot depth image 
+\begin_inset Formula $\rightarrow D$
+\end_inset
+
+
+\end_layout
+
+\begin_layout Plain Layout
+\begin_inset VSpace defskip
+\end_inset
+
+
+\end_layout
+
+\begin_layout Plain Layout
+\begin_inset Formula $labelled\_pixels\leftarrow\{\}$
+\end_inset
+
+
+\end_layout
+
+\begin_layout Plain Layout
+
+\series bold
+forall
+\series default
+ 
+\begin_inset Formula $s$
+\end_inset
+
+ 
+\series bold
+in
+\series default
+ 
+\begin_inset Formula $S$
+\end_inset
+
+
+\end_layout
+
+\begin_layout Plain Layout
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset Formula $p\leftarrow pixelPosition(s)$
+\end_inset
+
+
+\end_layout
+
+\begin_layout Plain Layout
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset Formula $floodFill(p)$
+\end_inset
+
+
+\end_layout
+
+\begin_layout Plain Layout
+
+\series bold
+endfor
+\end_layout
+
+\begin_layout Plain Layout
+\begin_inset VSpace defskip
+\end_inset
+
+
+\end_layout
+
+\begin_layout Plain Layout
+
+\series bold
+function
+\series default
+ floodFill (
+\series bold
+input:
+\series default
+ pixel 
+\begin_inset Formula $p$
+\end_inset
+
+)
+\end_layout
+
+\begin_layout Plain Layout
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset Formula $labelled\_pixels\leftarrow labelled\_pixels\cup\{p\}$
+\end_inset
+
+
+\end_layout
+
+\begin_layout Plain Layout
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset Formula $N\leftarrow getEightNeighbourPixels(p,D)$
+\end_inset
+
+
+\end_layout
+
+\begin_layout Plain Layout
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset Formula $p\_depth\leftarrow getDepth(p)$
+\end_inset
+
+
+\end_layout
+
+\begin_layout Plain Layout
+\begin_inset VSpace defskip
+\end_inset
+
+
+\end_layout
+
+\begin_layout Plain Layout
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset space ~
+\end_inset
+
+
+\series bold
+forall
+\series default
+ 
+\begin_inset Formula $n$
+\end_inset
+
+ 
+\series bold
+in
+\series default
+ 
+\begin_inset Formula $N$
+\end_inset
+
+
+\end_layout
+
+\begin_layout Plain Layout
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset Formula $n\_depth\leftarrow getDepth(p)$
+\end_inset
+
+
+\end_layout
+
+\begin_layout Plain Layout
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset space ~
+\end_inset
+
+
+\series bold
+if 
+\series default
+
+\begin_inset Formula $\left|p\_depth-n\_depth\right|\leq0.5cm$
+\end_inset
+
+ 
+\series bold
+then
+\end_layout
+
+\begin_layout Plain Layout
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset Formula $floodFill(n)$
+\end_inset
+
+
+\end_layout
+
+\begin_layout Plain Layout
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset space ~
+\end_inset
+
+
+\series bold
+endif
+\end_layout
+
+\begin_layout Plain Layout
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset space ~
+\end_inset
+
+
+\series bold
+endfor
+\end_layout
+
+\begin_layout Plain Layout
+
+\series bold
+endfunction
+\end_layout
+
+\begin_layout Plain Layout
+\begin_inset VSpace defskip
+\end_inset
+
+
+\end_layout
+
+\begin_layout Plain Layout
+
+\series bold
+output:
+\series default
+ arm and object image region pixels 
+\begin_inset Formula $\leftarrow labelled\_pixels$
+\end_inset
+
+
+\end_layout
+
+\begin_layout Plain Layout
+\begin_inset Caption
+
+\begin_layout Plain Layout
+Arm and Object Region Growing.
+\begin_inset CommandInset label
+LatexCommand label
+name "alg:region-growing"
+
+\end_inset
+
+
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+\begin_inset Float figure
+wide false
+sideways false
+status open
+
+\begin_layout Plain Layout
+\align center
+\begin_inset Graphics
+	filename images/Diagram1.jpg
+	width 80text%
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Plain Layout
+\begin_inset Caption
+
+\begin_layout Plain Layout
+\begin_inset Argument
+status open
+
+\begin_layout Plain Layout
+Region growing over depth-map pixels.
+\end_layout
+
+\end_inset
+
+To find the robot arm and held object image regions (bottom in red) and
+ associated surface point cloud, we perform seeded region growing.
+ The snapshot SIFT features (top left in blue) are the seeds, and the region
+ growing is performed over the depth image (top right).
+\begin_inset CommandInset label
+LatexCommand label
+name "fig:region-growing"
+
+\end_inset
+
+
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Subsection
+Arm and Object Segmentation
+\end_layout
+
+\begin_layout Standard
+The next step is to separate the arm and object point cloud regions, as
+ well as the SIFT features.
+ This is done in a similar way to separating snapshotted arm and object
+ SIFT features in Chapter 4.
+ First, the appearance and shape model of the robot arm and gripper is learned
+ as an initialisation stage.
+ This is done by having the robot move its arm, without holding an object,
+ through the scene.
+ The gripper is slowly rotated 
+\begin_inset Formula $360\textdegree$
+\end_inset
+
+ through the course of the linear movement.
+ Periodically, snapshots of arm features are taken.
+ In addition to snapshotting the arm features, the arm surface point cloud
+ is also extracted for each snapshot (using the approach described in the
+ previous section).
+ Since the robot is not holding an object, the filled region corresponds
+ to the robot arm.
+ The full set of these views, generated through the course of the entire
+ movement routine as the gripper is rotated through the full 
+\begin_inset Formula $360\textdegree$
+\end_inset
+
+, forms the arm appearance and shape model.
+\end_layout
+
+\begin_layout Standard
+Once the arm model is learned we can use it to separate the arm and object
+ image regions and SIFT features in a snapshot.
+ First, we find the pose of the arm in the snapshot image scene.
+ To do this we match every learned arm snapshot to the features of an object-vie
+w using the method presented in Chapter 3.
+ For the best matching arm snapshot (with the highest number of feature
+ matches) we find the aligning transform between the snapshot and the object-vie
+w.
+ The method to find this transform is presented in the next section (Section
+ 
+\begin_inset CommandInset ref
+LatexCommand ref
+reference "sub:Aligning-points"
+
+\end_inset
+
+).
+ We use the aligning transform to overlay the learned arm surface points
+ of the arm snapshot over the object-view.
+ All object-view surface points and SIFT features that are within a small
+ threshold distance of an overlayed arm surface point are labelled as belonging
+ to the arm.
+\end_layout
+
+\begin_layout Standard
+The final result is a set of views of the different aspects of the object.
+ Each object-view is composed of the object SIFT features, the object surface
+ point cloud, the robot arm SIFT features, and the robot arm surface point
+ cloud.
+ The next step is to stitch these views together into a single coherent
+ model.
+ This is presented in Section 
+\begin_inset CommandInset ref
+LatexCommand ref
+reference "sec:Combining-Views"
+
+\end_inset
+
+.
+\end_layout
+
+\begin_layout Subsection
+Aligning Corresponding 3D Points
+\begin_inset CommandInset label
+LatexCommand label
+name "sub:Aligning-points"
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+A common task that is performed at several stages of object reconstruction,
+ as well as recognition and localisation, is finding a transform to align
+ two sets of corresponding points.
+ For example, when arm snapshot SIFT features are matched to the object-view
+ features we need to align the arm snapshot features with the matching snapshot
+ features to determine the arm's pose.
+\end_layout
+
+\begin_layout Standard
+First let us define the specific problem.
+ Let there be a set of corresponding 3D point pairs 
+\begin_inset Formula $P=\{(a_{0},b_{0}),\ldots,(a_{n},b_{n})\}$
+\end_inset
+
+, where each 
+\begin_inset Formula $a_{i}$
+\end_inset
+
+ and 
+\begin_inset Formula $b_{i}$
+\end_inset
+
+ are triples of the form 
+\begin_inset Formula $(x,y,z)$
+\end_inset
+
+.
+ The goal is to find a rigid transform that aligns the points 
+\begin_inset Formula $a$
+\end_inset
+
+ with the corresponding points 
+\begin_inset Formula $b$
+\end_inset
+
+.
+ A rigid transform is defined in this case as a rotation followed by a translati
+on (a 
+\begin_inset Formula $3\times3$
+\end_inset
+
+ matrix 
+\begin_inset Formula $R$
+\end_inset
+
+, and 
+\begin_inset Formula $3D$
+\end_inset
+
+ vector 
+\begin_inset Formula $t$
+\end_inset
+
+, respectively).
+ An aligning transform should minimise an error over the corresponding point
+ pairs.
+ The error function is defined as the sum of square distances between transforme
+d points 
+\begin_inset Formula $a$
+\end_inset
+
+ and their corresponding points 
+\begin_inset Formula $b$
+\end_inset
+
+:
+\end_layout
+
+\begin_layout Standard
+\begin_inset Formula 
+\begin{equation}
+Transform=\underset{R,t}{argmin}\,\, error(R,t)\label{eq:min_transform}
+\end{equation}
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+\begin_inset Formula 
+\begin{equation}
+error(R,t)=\underset{i=0}{\overset{n}{\sum}}\left|\left(Ra_{i}+t\right)-b_{i}\right|^{2}\label{eq:transform_err}
+\end{equation}
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+Finding the transform that minimises this error is a least-squares fitting
+ problem of a system of linear equations, and can be solved in several ways
+ 
+\begin_inset CommandInset citation
+LatexCommand cite
+key "5_efficient_icp"
+
+\end_inset
+
+ 
+\begin_inset CommandInset citation
+LatexCommand cite
+key "5_svd_point_reconstruction"
+
+\end_inset
+
+.
+ We use Singular Value Decomposition
+\begin_inset CommandInset citation
+LatexCommand cite
+key "5_SVD"
+
+\end_inset
+
+ to solve this linear system.
+ This is done by first finding the rotation matrix 
+\begin_inset Formula $R$
+\end_inset
+
+ by solving the following least squares problem:
+\end_layout
+
+\begin_layout Standard
+\begin_inset Formula 
+\[
+\underset{R}{min}\left\Vert RA-B\right\Vert 
+\]
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+where 
+\begin_inset Formula $A=[a_{0}-\bar{a},\ldots,a_{n}-\bar{a}]$
+\end_inset
+
+ and 
+\begin_inset Formula $B=[b_{0}-\bar{b},\ldots,b_{n}-\bar{b}]$
+\end_inset
+
+, 
+\begin_inset Formula $\bar{a}=\frac{1}{n}\underset{i=0}{\overset{n}{\sum}}a_{i}$
+\end_inset
+
+ and 
+\begin_inset Formula $\bar{b}=\frac{1}{n}\underset{i=0}{\overset{n}{\sum}}b_{i}$
+\end_inset
+
+.
+ We compute the Singular Value Decomposition of the matrix 
+\begin_inset Formula $C=BA^{T}$
+\end_inset
+
+ such that 
+\begin_inset Formula $U\sum V^{T}=C$
+\end_inset
+
+, where 
+\begin_inset Formula $U$
+\end_inset
+
+ and 
+\begin_inset Formula $V$
+\end_inset
+
+ are orthogonal matrices, and 
+\begin_inset Formula $\sum$
+\end_inset
+
+ is a diagonal matrix.
+ We then compute the rotation matrix 
+\begin_inset Formula $R=UDV^{T}$
+\end_inset
+
+ where 
+\begin_inset Formula $D$
+\end_inset
+
+ is a diagonal 
+\begin_inset Formula $3\times3$
+\end_inset
+
+ matrix such that its top left and middle elements are 1, and its bottom
+ right is 
+\begin_inset Formula $\det(UV^{T})$
+\end_inset
+
+.
+ Finally, we compute the translation vector 
+\begin_inset Formula $t=\bar{b}-R\bar{a}$
+\end_inset
+
+, which, together with the rotation matrix 
+\begin_inset Formula $R$
+\end_inset
+
+, gives us the full rigid body transformation to align the two sets of correspon
+ding points.
+ More details on this method can be found in work by Söderkvist 
+\shape italic
+et al
+\shape default
+ 
+\begin_inset CommandInset citation
+LatexCommand cite
+key "5_svd_point_reconstruction2"
+
+\end_inset
+
+.
+\end_layout
+
+\begin_layout Section
+Object-View Stitching
+\begin_inset CommandInset label
+LatexCommand label
+name "sec:Combining-Views"
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+To form a complete object model we need to align the separate object-views
+ so that their relative poses match their alignment on the physical object.
+ There has been a lot of work in this area, stitching together views for
+ object reconstruction 
+\begin_inset CommandInset citation
+LatexCommand cite
+key "5_realtime_model_acquisition"
+
+\end_inset
+
+ 
+\begin_inset CommandInset citation
+LatexCommand cite
+key "5_kinect_reconstruction"
+
+\end_inset
+
+ as well as for building environment maps for robot navigation 
+\begin_inset CommandInset citation
+LatexCommand cite
+key "5_robot_nav"
+
+\end_inset
+
+.
+ In our approach we use both the SIFT features and surface point cloud informati
+on of each object-view to determine its relative pose.
+ We use the SIFT features to find an approximate transform for an object-view
+ to align it with the already processed views.
+ This is followed by using the surface point cloud and the Iterative Closest
+ Point (ICP) method (described in Section 
+\begin_inset CommandInset ref
+LatexCommand ref
+reference "sub:Iterative-Closest-Point"
+
+\end_inset
+
+) to further refine the transform.
+ Figure 
+\begin_inset CommandInset ref
+LatexCommand ref
+reference "fig:2D-stitching"
+
+\end_inset
+
+ shows a simple example of stitching together multiple independent snapshots
+ to reconstruct the overall object shape.
+\end_layout
+
+\begin_layout Standard
+\begin_inset Float figure
+wide false
+sideways false
+status open
+
+\begin_layout Plain Layout
+\align center
+\begin_inset Graphics
+	filename images/stitching_example.png
+	width 80text%
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Plain Layout
+\begin_inset Caption
+
+\begin_layout Plain Layout
+\begin_inset Argument
+status open
+
+\begin_layout Plain Layout
+Snapshot stitching example.
+\end_layout
+
+\end_inset
+
+A simple 2D example of stitching together multiple snapshots (top) of an
+ object.
+ The snapshots are aligned one by one (middle) to finally reconstruct the
+ complete model (bottom).
+\begin_inset CommandInset label
+LatexCommand label
+name "fig:2D-stitching"
+
+\end_inset
+
+
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Plain Layout
+
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+Let the list of extracted object-views be defined as 
+\begin_inset Formula $V=\{v_{0},v_{1},\ldots,v_{n}\}$
+\end_inset
+
+.
+ Each view 
+\begin_inset Formula $v\in V$
+\end_inset
+
+ is composed of a list of object SIFT features, arm SIFT features, object
+ surface points, and arm surface points.
+ The aim is to find a list of rigid transform 
+\begin_inset Formula $T=\{t_{0},t_{1},\ldots,t_{n}\}$
+\end_inset
+
+, one per view, such that the transformed views are aligned relative to
+ each other according to the shape of the object.
+\end_layout
+
+\begin_layout Standard
+First, we initialise the list of aligned object-views to contain only the
+ first view (
+\begin_inset Formula $v_{0}$
+\end_inset
+
+).
+ We align the remainder of the views relative to the first view.
+ We then initialise a point cloud to contain the arm and object surface
+ points of the first view.
+ The next step is to iterate through the remaining object-views and align
+ each one relative to the previously aligned views.
+\end_layout
+
+\begin_layout Standard
+To align an object-view, we match its SIFT features to the SIFT features
+ of every aligned object-view, using the method presented in Chapter 3.
+ We take the match with the highest number of feature matches and use it
+ to generate an alignment transform (using the method presented in Section
+ 
+\begin_inset CommandInset ref
+LatexCommand ref
+reference "sub:Aligning-points"
+
+\end_inset
+
+).
+ This transform is then applied to the current object-view by transforming
+ all of its surface points (arm and object) and all of its SIFT features
+ (arm and object).
+\end_layout
+
+\begin_layout Standard
+The next step is to use the object-view's surface points to refine the alignment.
+ This is done by using ICP to line up the object-view's surface points with
+ the surface points of all of the already aligned object-views.
+ This refined transform is then applied to the object-view and it is inserted
+ into the list of aligned views.
+ These steps are summarised in Algorithm 
+\begin_inset CommandInset ref
+LatexCommand ref
+reference "alg:Aligning-Views-Algorithm"
+
+\end_inset
+
+.
+ 
+\end_layout
+
+\begin_layout Standard
+\begin_inset Float algorithm
+wide false
+sideways false
+status collapsed
+
+\begin_layout Plain Layout
+
+\series bold
+input:
+\series default
+ list of object-views 
+\begin_inset Formula $\rightarrow V$
+\end_inset
+
+
+\end_layout
+
+\begin_layout Plain Layout
+\begin_inset VSpace defskip
+\end_inset
+
+
+\end_layout
+
+\begin_layout Plain Layout
+\begin_inset Formula $alignedViews\leftarrow\{v_{0}\}$
+\end_inset
+
+
+\end_layout
+
+\begin_layout Plain Layout
+\begin_inset Formula $allPoints\leftarrow objectPoints(v_{0})\cup armPoints(v_{0})$
+\end_inset
+
+
+\end_layout
+
+\begin_layout Plain Layout
+
+\series bold
+forall
+\series default
+ 
+\begin_inset Formula $v$
+\end_inset
+
+ 
+\series bold
+in
+\series default
+ 
+\begin_inset Formula $V$
+\end_inset
+
+
+\end_layout
+
+\begin_layout Plain Layout
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset Formula $bestMatch\leftarrow findBestSIFTMatch(alignedViews)$
+\end_inset
+
+
+\end_layout
+
+\begin_layout Plain Layout
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset Formula $approxTransform\leftarrow findTransform(bestMatch)$
+\end_inset
+
+
+\end_layout
+
+\begin_layout Plain Layout
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset Formula $v\leftarrow applyTransform(v,approxTransform)$
+\end_inset
+
+
+\end_layout
+
+\begin_layout Plain Layout
+\begin_inset VSpace defskip
+\end_inset
+
+
+\end_layout
+
+\begin_layout Plain Layout
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset Formula $viewPoints\leftarrow objectPoints(v)\cup armPoints(v)$
+\end_inset
+
+
+\end_layout
+
+\begin_layout Plain Layout
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset Formula $refinedTransform\leftarrow performICP(viewPoints,allPoints)$
+\end_inset
+
+
+\end_layout
+
+\begin_layout Plain Layout
+\begin_inset VSpace defskip
+\end_inset
+
+
+\end_layout
+
+\begin_layout Plain Layout
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset Formula $a\leftarrow applyTransform(v,refinedTransform)$
+\end_inset
+
+
+\end_layout
+
+\begin_layout Plain Layout
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset Formula $alignedViews\leftarrow alignedViews\cup\{a\}$
+\end_inset
+
+
+\end_layout
+
+\begin_layout Plain Layout
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset Formula $allPoints\leftarrow allPoints\cup objectPoints(v)\cup armPoints(v)$
+\end_inset
+
+
+\end_layout
+
+\begin_layout Plain Layout
+
+\series bold
+endfor
+\end_layout
+
+\begin_layout Plain Layout
+\begin_inset VSpace defskip
+\end_inset
+
+
+\end_layout
+
+\begin_layout Plain Layout
+
+\series bold
+output:
+\series default
+ list of aligned object-views 
+\begin_inset Formula $\leftarrow alignedViews$
+\end_inset
+
+
+\end_layout
+
+\begin_layout Plain Layout
+\begin_inset Caption
+
+\begin_layout Plain Layout
+Aligning Views Algorithm Overview
+\begin_inset CommandInset label
+LatexCommand label
+name "alg:Aligning-Views-Algorithm"
+
+\end_inset
+
+
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Plain Layout
+
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+The set of aligned object-views forms the basis for the object model.
+ The remaining step is to fit a geometric model to the surface point cloud.
+ This is presented in Section 
+\begin_inset CommandInset ref
+LatexCommand ref
+reference "sec:Shape-Fitting"
+
+\end_inset
+
+.
+\end_layout
+
+\begin_layout Subsection
+Iterative Closest Point
+\begin_inset CommandInset label
+LatexCommand label
+name "sub:Iterative-Closest-Point"
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+Iterative closest point (ICP) 
+\begin_inset CommandInset citation
+LatexCommand cite
+key "5_icp_seminal"
+
+\end_inset
+
+ is a method to align two point clouds that have a subset of points describing
+ a common surface.
+ It is used to find the transformation of a point cloud such that the distance
+ to the corresponding points of the other point cloud is minimised.
+ Example applications of this method include reconstructing object shapes
+ from several individual scans 
+\begin_inset CommandInset citation
+LatexCommand cite
+key "5_manipulator_object_modeling"
+
+\end_inset
+
+ 
+\begin_inset CommandInset citation
+LatexCommand cite
+key "5_realtime_model_acquisition"
+
+\end_inset
+
+ and motion estimation for mobile robots 
+\begin_inset CommandInset citation
+LatexCommand cite
+key "5_ICP_motion_estimation"
+
+\end_inset
+
+.
+\end_layout
+
+\begin_layout Standard
+Let us define two points clouds, A and B.
+ The ICP algorithm involves the following sequence of steps:
+\end_layout
+
+\begin_layout Enumerate
+determine a correspondence between points in 
+\emph on
+A
+\emph default
+ and 
+\emph on
+B
+\emph default
+ using a nearest neighbour criterion;
+\end_layout
+
+\begin_layout Enumerate
+find a rigid transformation (rotation and translation) for the points in
+ 
+\emph on
+A
+\emph default
+ to minimise the square distance to the corresponding points in 
+\emph on
+B
+\emph default
+;
+\end_layout
+
+\begin_layout Enumerate
+apply the transformation to the points in 
+\emph on
+A
+\emph default
+;
+\end_layout
+
+\begin_layout Enumerate
+repeat the process (by finding new correspondences, etc).
+\end_layout
+
+\begin_layout Standard
+A simple representation of the ICP process is shown in Figure 
+\begin_inset CommandInset ref
+LatexCommand ref
+reference "fig:icp-example"
+
+\end_inset
+
+.
+ The ICP algorithm works best when the approximate relative pose between
+ the two point clouds is known.
+ In our case this is achieved by first aligning the object-views based on
+ the SIFT features, which provides a good initial alignment.
+ We then use the PCL point cloud library
+\begin_inset Foot
+status open
+
+\begin_layout Plain Layout
+http://pointclouds.org/
+\end_layout
+
+\end_inset
+
+ to implement the ICP method.
+ This library takes as input two point clouds, in the form of a list of
+ 3D points, and outputs a rigid transform that best aligns the first point
+ cloud with the second.
+ This library uses a point to point nearest neighbour approach for building
+ a correspondence and uses SVD for finding the alignment transform for a
+ given correspondence.
+ When using the ICP library method, we set the maximum iterations of the
+ ICP method to 
+\begin_inset Formula $20$
+\end_inset
+
+ and the RANSAC outlier threshold to 
+\begin_inset Formula $2cm$
+\end_inset
+
+.
+ These parameters were chosen ad hoc, but were experimentally verified to
+ give good results with the objects used.
+ The final output of the ICP stage is a refined transform between the object-vie
+w point cloud and the current object point cloud.
+ 
+\end_layout
+
+\begin_layout Standard
+\begin_inset Float figure
+wide false
+sideways false
+status open
+
+\begin_layout Plain Layout
+\align center
+\begin_inset Graphics
+	filename images/icp.png
+	width 80text%
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Plain Layout
+\begin_inset Caption
+
+\begin_layout Plain Layout
+\begin_inset Argument
+status open
+
+\begin_layout Plain Layout
+Iterative Closest Point example.
+\end_layout
+
+\end_inset
+
+An example of two iterations of the ICP method on point clouds represented
+ by a green and black curve.
+ First, a correspondence is found between points in the two clouds, then
+ an error minimising transform is found using these point pairs.
+ This process is repeated multiple times, finding new correspondences and
+ transforms, and converges to the best alignment transform between the point
+ clouds.
+\begin_inset CommandInset label
+LatexCommand label
+name "fig:icp-example"
+
+\end_inset
+
+
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Plain Layout
+
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Subsection
+Loop Closure and Error Accumulation
+\begin_inset CommandInset label
+LatexCommand label
+name "sub:Loop-Closure"
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+In the previous section we presented a method for stitching together individual
+ views of an object to align them relative to each other.
+ Each view is aligned relative to the already aligned views.
+ However, each alignment will inevitably result in some error due to sensor
+ noise and incorrectly classified surface points.
+ These errors accumulate over time, until the final object-views are not
+ aligned properly relative to the initial object-views.
+ 
+\end_layout
+
+\begin_layout Standard
+A related problem of loop closure arises when the robot observes an object
+ view that was previously seen a long time ago.
+ This happens when the robot has rotated the object in its hand the full
+ 
+\begin_inset Formula $360\textdegree$
+\end_inset
+
+.
+ The problem is deciding whether the robot has seen the object-view previously,
+ and in correlating features between the object views separated by a large
+ time difference.
+ This problem is of particular importance in mobile robotics and Simultaneous
+ Localisation and Mapping (SLAM) 
+\begin_inset CommandInset citation
+LatexCommand cite
+key "5_slam"
+
+\end_inset
+
+, but is also important in 3D object reconstruction 
+\begin_inset CommandInset citation
+LatexCommand cite
+key "5_manipulator_object_modeling"
+
+\end_inset
+
+.
+\end_layout
+
+\begin_layout Standard
+In our system, we do not specifically address these issues.
+ We have found that by aligning each object-view relative to the point cloud
+ of all of the already aligned views (as opposed to only the single previously
+ aligned view) reduced the accumulated stitching errors to a negligible
+ amount for our purposes.
+ However, future versions of this system should address this issue by incorporat
+ing existing methods.
+ We discuss this further in the conclusion (Section 
+\begin_inset CommandInset ref
+LatexCommand ref
+reference "sec:Conclusion"
+
+\end_inset
+
+).
+\end_layout
+
+\begin_layout Subsection
+Handling Gripper Occlusion
+\end_layout
+
+\begin_layout Standard
+The robot extracts object-views by moving the target object through the
+ scene in a linear motion while rotating it along one axis (using the wrist
+ joint).
+ As a result, the robot is not able to observe all areas of the object's
+ surface.
+ Some areas are hidden by the robot gripper, while some are not observed
+ due to the single-axis rotation.
+ To address this problem, the robot performs two separate passes for reconstruct
+ing the object, holding the object in a different grasp each time.
+ We perform the entire object reconstruction procedure, described in this
+ chapter, twice on the same object with different grasps.
+ Figure 
+\begin_inset CommandInset ref
+LatexCommand ref
+reference "fig:gripper-occlusion"
+
+\end_inset
+
+ shows the robot grasping the object differently in the two reconstruction
+ passes.
+ This generates two separate object-view sets and surface point clouds.
+ We then take these two independent object models and combine them into
+ one by finding a transform that aligns the two object models together.
+ We do this by first using SIFT features to match every object-view from
+ one model to the other, using the method described in Chapter 3.
+ The match that has the largest number of feature match pairs is then used
+ to generate an approximate transform using the method described in Section
+ 
+\begin_inset CommandInset ref
+LatexCommand ref
+reference "sub:Aligning-points"
+
+\end_inset
+
+.
+ After the two object models are aligned using SIFT features, we perform
+ an ICP pass to align the two separate surface point clouds of the object
+ models.
+ At the conclusion of this, the two object models are merged by combining
+ the lists of object-views and the surface point clouds.
+ In this way, we are able to build a model of an object that includes all
+ of the object's surface and aspects.
+\end_layout
+
+\begin_layout Standard
+\begin_inset Float figure
+wide false
+sideways false
+status open
+
+\begin_layout Plain Layout
+\align center
+\begin_inset Graphics
+	filename images/vcan_view.jpg
+	width 80text%
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Plain Layout
+\begin_inset Caption
+
+\begin_layout Plain Layout
+\begin_inset Argument
+status open
+
+\begin_layout Plain Layout
+Object grasping using different grasp orientations and positions.
+\end_layout
+
+\end_inset
+
+The robot holding the cylinder object in two different orientations and
+ positions.
+ The robot performs the object-view extraction and aligning process with
+ both, to create two models which are then combined into one.
+ By doing this the robot can compensate for blind spots in the individual
+ model caused by gripper occlusion.
+\begin_inset CommandInset label
+LatexCommand label
+name "fig:gripper-occlusion"
+
+\end_inset
+
+
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Plain Layout
+
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Subsection
+Results
+\end_layout
+
+\begin_layout Standard
+To test the object-view stitching method, we used three different objects.
+ The first object is a box with highly textured sides and dimensions
+\emph on
+ 
+\begin_inset Formula $5.5cm\times8.4cm\times11.9cm$
+\end_inset
+
+.
+ 
+\emph default
+The second object is a cylinder, also with highly textured sides, of height
+ 
+\emph on
+
+\begin_inset Formula $13cm$
+\end_inset
+
+ 
+\emph default
+and diameter 
+\emph on
+
+\begin_inset Formula $6cm$
+\end_inset
+
+.
+ 
+\emph default
+The final object is a toy truck 
+\begin_inset Formula $25cm$
+\end_inset
+
+ long, 
+\begin_inset Formula $12cm$
+\end_inset
+
+ wide, and with a maximum height of 
+\begin_inset Formula $12cm$
+\end_inset
+
+.
+ The truck has a small box attached on the back to enable the robot gripper
+ to securely grasp the object.
+ The majority of the body of the truck is not textured and composed of only
+ two colours.
+\end_layout
+
+\begin_layout Standard
+\begin_inset Float figure
+wide false
+sideways false
+status open
+
+\begin_layout Plain Layout
+\align center
+\begin_inset Graphics
+	filename images/box.jpg
+	width 60text%
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Plain Layout
+\begin_inset Caption
+
+\begin_layout Plain Layout
+\begin_inset Argument
+status open
+
+\begin_layout Plain Layout
+Box object point cloud reconstruction results.
+\end_layout
+
+\end_inset
+
+The box object (top left) and different views of the reconstructed surface
+ point cloud.
+\begin_inset CommandInset label
+LatexCommand label
+name "fig:box-cloud"
+
+\end_inset
+
+
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Plain Layout
+
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+\begin_inset Float figure
+wide false
+sideways false
+status open
+
+\begin_layout Plain Layout
+\align center
+\begin_inset Graphics
+	filename images/can.jpg
+	width 60text%
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Plain Layout
+\begin_inset Caption
+
+\begin_layout Plain Layout
+\begin_inset Argument
+status open
+
+\begin_layout Plain Layout
+Cylinder object point cloud reconstruction results.
+\end_layout
+
+\end_inset
+
+The cylinder object (top left) and different views of the reconstructed
+ surface point cloud.
+\begin_inset CommandInset label
+LatexCommand label
+name "fig:can-cloud"
+
+\end_inset
+
+
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+\begin_inset Float figure
+wide false
+sideways false
+status open
+
+\begin_layout Plain Layout
+\align center
+\begin_inset Graphics
+	filename images/truck.jpg
+	width 60text%
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Plain Layout
+\begin_inset Caption
+
+\begin_layout Plain Layout
+\begin_inset Argument
+status open
+
+\begin_layout Plain Layout
+Truck object point cloud reconstruction results.
+\end_layout
+
+\end_inset
+
+The truck object (top left) and different views of the reconstructed surface
+ point cloud.
+\begin_inset CommandInset label
+LatexCommand label
+name "fig:truck-cloud"
+
+\end_inset
+
+
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+The robot performed the object reconstruction method described in this chapter
+ on each of these objects, extracting the object-views and stitching them
+ together to form a coherent model.
+ The surface point clouds of the reconstructed models of the different objects
+ are shown in Figure 
+\begin_inset CommandInset ref
+LatexCommand ref
+reference "fig:box-cloud"
+
+\end_inset
+
+ (box), Figure 
+\begin_inset CommandInset ref
+LatexCommand ref
+reference "fig:can-cloud"
+
+\end_inset
+
+ (cylinder), and Figure 
+\begin_inset CommandInset ref
+LatexCommand ref
+reference "fig:truck-cloud"
+
+\end_inset
+
+ (truck).
+ It can be seen that the point clouds for all three objects closely match
+ the shape of each object, indicating that the object-views were stitched
+ together correctly.
+\end_layout
+
+\begin_layout Section
+Shape Fitting
+\begin_inset CommandInset label
+LatexCommand label
+name "sec:Shape-Fitting"
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+A dense surface point cloud contains a large amount of information about
+ the shape of an object.
+ However, a more compact shape representation is more suitable for some
+ applications (eg: collision detection).
+ For this reason we fit a geometric model to the point cloud.
+ The complexity and type of geometric model can vary greatly, depending
+ on the class of shapes that needs to be represented and the application
+ domain.
+ For example, a very simple geometric model is a sphere.
+ However, this is a very restrictive model that is only able to accurately
+ represent a single shape.
+ At the other end of the spectrum, a triangular mesh can be fitted to a
+ point cloud.
+ A triangular mesh can represent arbitrary 3D shapes but has the disadvantage
+ that fitting a mesh to a point cloud is more complex than fitting a simpler
+ model (eg: a sphere).
+ Other tasks, such as collision detection, are also more complex to perform
+ on a triangular mesh.
+\end_layout
+
+\begin_layout Standard
+Our approach uses a super-ellipsoid to model an object's shape.
+ Super-ellipsoids are a subclass of super-quadrics and are popular for represent
+ing basic shapes in computer graphics 
+\begin_inset CommandInset citation
+LatexCommand cite
+key "5_superquadric_graphics"
+
+\end_inset
+
+.
+ The surface of a super-ellipsoid is defined as all points 
+\begin_inset Formula $(x,y,z)$
+\end_inset
+
+ that satisfy the following equation:
+\end_layout
+
+\begin_layout Standard
+\begin_inset Formula 
+\begin{equation}
+F\left(x,y,z\right)\equiv\left[\left(\dfrac{x}{A}\right)^{\tfrac{2}{e_{2}}}+\left(\dfrac{y}{B}\right)^{\tfrac{2}{e_{2}}}\right]^{\tfrac{e_{2}}{e_{1}}}+\left(\dfrac{z}{C}\right)^{\tfrac{2}{e_{1}}}=1\label{eq:sq_surface_Def}
+\end{equation}
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+The internal volume of the super-ellipsoid is defined as all points such
+ that 
+\begin_inset Formula $F(x,y,z)\leq1$
+\end_inset
+
+.
+ There are five parameters that define the shape and size of a super-ellipsoid.
+ These are 
+\begin_inset Formula $A$
+\end_inset
+
+, 
+\begin_inset Formula $B$
+\end_inset
+
+, 
+\begin_inset Formula $C$
+\end_inset
+
+, 
+\begin_inset Formula $e_{1}$
+\end_inset
+
+, and 
+\begin_inset Formula $e_{2}$
+\end_inset
+
+.
+ The parameters 
+\begin_inset Formula $A$
+\end_inset
+
+, 
+\begin_inset Formula $B$
+\end_inset
+
+ and 
+\begin_inset Formula $C$
+\end_inset
+
+ define the extents of the shape in the 
+\begin_inset Formula $x$
+\end_inset
+
+, 
+\begin_inset Formula $y$
+\end_inset
+
+, and 
+\begin_inset Formula $z$
+\end_inset
+
+ dimensions, respectively.
+ The parameters 
+\begin_inset Formula $e_{1}$
+\end_inset
+
+ and 
+\begin_inset Formula $e_{2}$
+\end_inset
+
+ define the general shape of the surface, Figure 
+\begin_inset CommandInset ref
+LatexCommand ref
+reference "fig:superellipses"
+
+\end_inset
+
+ shows several example super-ellipsoid shapes.
+\end_layout
+
+\begin_layout Standard
+\begin_inset Float figure
+wide false
+sideways false
+status open
+
+\begin_layout Plain Layout
+\align center
+\begin_inset Graphics
+	filename images/superellipses.png
+	width 70text%
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Plain Layout
+\begin_inset Caption
+
+\begin_layout Plain Layout
+\begin_inset Argument
+status open
+
+\begin_layout Plain Layout
+Super-ellipse sample shapes.
+\end_layout
+
+\end_inset
+
+Example shapes that can be represented by the parametric super-ellipse geometric
+ model.
+\begin_inset CommandInset label
+LatexCommand label
+name "fig:superellipses"
+
+\end_inset
+
+
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Plain Layout
+
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Subsection
+Model Fitting Method
+\end_layout
+
+\begin_layout Standard
+To fit a super-ellipse model to the object's surface point cloud we find
+ a set of parameters that minimises the distance between the model surface
+ and the point cloud's points.
+ The total number of parameters of the geometric model is 12.
+ Five of these parameters determine the super-ellipsoid shape and seven
+ determine the point cloud alignment transform.
+ The transform parameters consist of four describing a rotation transform
+ (in the form of quaternions) and three describing a translation.
+ The purpose of the transform is to align the point cloud with the super-ellipso
+id.
+\end_layout
+
+\begin_layout Standard
+The next step is to formulate the objective function.
+ Let the point cloud points be the set 
+\begin_inset Formula $\{p_{0},p_{1},\ldots,p_{n}\}$
+\end_inset
+
+, where each point is a 3D world position 
+\begin_inset Formula $p_{i}=(x_{i},y_{i},z_{i})$
+\end_inset
+
+.
+ The objective function is defined as the average radial distance between
+ the transformed point cloud and the surface of the super-ellipsoid.
+ For calculating the distance between the super-ellipsoid surface (defined
+ by the parameters 
+\begin_inset Formula $\{A,B,C,e_{1},e_{2}\}$
+\end_inset
+
+) and a point 
+\begin_inset Formula $(x,y,z)$
+\end_inset
+
+ we use the following radial distance function 
+\begin_inset CommandInset citation
+LatexCommand cite
+key "5_superquadric_fitting"
+
+\end_inset
+
+ 
+\begin_inset CommandInset citation
+LatexCommand cite
+key "5_superquadric_comparison"
+
+\end_inset
+
+:
+\end_layout
+
+\begin_layout Standard
+\begin_inset Formula 
+\begin{equation}
+RadialDist(x,y,z)=\sqrt{x^{2}+y^{2}+z^{2}}\cdot\left|1-F^{-\nicefrac{e_{1}}{2}}\left(x_{,}y,z\right)\right|,\label{eq:radialsq_dist_def}
+\end{equation}
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+where the function 
+\begin_inset Formula $F$
+\end_inset
+
+ is defined in the equation 
+\begin_inset CommandInset ref
+LatexCommand ref
+reference "eq:sq_surface_Def"
+
+\end_inset
+
+.
+ The overall objective error function of a super-ellipsoid shape and transform
+ is defined as:
+\end_layout
+
+\begin_layout Standard
+\begin_inset Formula 
+\begin{equation}
+error=\dfrac{1}{n}\underset{i=0}{\overset{n}{\sum}}RadialDist\left(M(p_{i}+T)\right),\label{eq:sq_fit_err}
+\end{equation}
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+where 
+\begin_inset Formula $M$
+\end_inset
+
+ is the rotation matrix (derived from the quaternion parameters of the transform
+) and 
+\begin_inset Formula $T$
+\end_inset
+
+ is the translation vector component of the point cloud transform.
+ The next step is to find the 12 parameters (which determine transform and
+ super-ellipsoid shape) that minimise this error function.
+ There are many different methods 
+\begin_inset CommandInset citation
+LatexCommand cite
+key "5_optimisation_methods1"
+
+\end_inset
+
+ 
+\begin_inset CommandInset citation
+LatexCommand cite
+key "5_optimisation_methods2"
+
+\end_inset
+
+ that can be used to do this.
+ For ease of implementation we used a Random Restart Nelder-Mead optimisation
+ method, performing ten restarts of five hundred iterations each.
+ We determined these parameters by experimenting with different values on
+ the cylinder object, choosing the number of iterations such that a fit
+ was produced consistently over several trial runs.
+ These parameters may not be suitable for objects and environments other
+ than our test environment.
+ However, as our aim was to show the overall feasibility of reconstructing
+ the 3D shape of an object using data obtain by a robot, we do not view
+ this as a fundamental problem.
+\end_layout
+
+\begin_layout Standard
+On completion, the twelve parameters that yield the lowest objective error
+ function across the point cloud is taken as the final super-ellipsoid geometric
+ model of the object.
+\end_layout
+
+\begin_layout Subsection
+Results
+\end_layout
+
+\begin_layout Standard
+We performed the super-ellipsoid fitting method on the box and cylinder
+ objects.
+ The box object point cloud resulted in a super-ellipsoid with the following
+ parameters: 
+\begin_inset Formula $e_{1}:0.11$
+\end_inset
+
+, 
+\begin_inset Formula $e_{2}:0.22$
+\end_inset
+
+, 
+\begin_inset Formula $A:6.09$
+\end_inset
+
+, 
+\begin_inset Formula $B:4.41$
+\end_inset
+
+, 
+\begin_inset Formula $C:2.93$
+\end_inset
+
+.
+ The super-ellipsoid fitted to the cylinder object had the following parameters:
+ 
+\begin_inset Formula $e_{1}:0.19$
+\end_inset
+
+, 
+\begin_inset Formula $e_{2}:0.96$
+\end_inset
+
+, 
+\begin_inset Formula $A:6.64$
+\end_inset
+
+, 
+\begin_inset Formula $B:3.46$
+\end_inset
+
+, 
+\begin_inset Formula $C:3.38$
+\end_inset
+
+.
+ The fitted shapes are shown in Figure 
+\begin_inset CommandInset ref
+LatexCommand ref
+reference "fig:box-can-shapes"
+
+\end_inset
+
+.
+ These geometric models closely correspond to the true shapes of the correspondi
+ng objects.
+\end_layout
+
+\begin_layout Standard
+\begin_inset Float figure
+wide false
+sideways false
+status open
+
+\begin_layout Plain Layout
+\align center
+\begin_inset Graphics
+	filename images/box_can_shapes.jpg
+	width 80text%
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Plain Layout
+\begin_inset Caption
+
+\begin_layout Plain Layout
+\begin_inset Argument
+status open
+
+\begin_layout Plain Layout
+Box and cylinder object shape fitting results.
+\end_layout
+
+\end_inset
+
+The super-quadric shapes fitted to the box (left) and cylinder (right) surface
+ point clouds.
+\begin_inset CommandInset label
+LatexCommand label
+name "fig:box-can-shapes"
+
+\end_inset
+
+
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Section
+Object Recognition and Localisation
+\begin_inset CommandInset label
+LatexCommand label
+name "sec:Object-Recognition"
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+One of the main uses of the reconstructed object model is to allow the robot
+ to recognise and localise the object in a scene.
+ The model consists of a set of object-views, a surface point cloud, and
+ a fitted geometric model.
+ The scene, as observed by the Kinect sensor, is taken to consist of a set
+ of SIFT features (each with an associated 3D world space position) and
+ a point cloud.
+ We use the SIFT feature and point cloud data of the model to recognise
+ the target object and, if it is present in the scene, determine its position
+ and orientation.
+\end_layout
+
+\begin_layout Standard
+Our approach is to first use the SIFT features of the object-views to recognise
+ the object and find its approximate pose, followed by using the object's
+ surface point cloud to refine the pose estimate using ICP.
+ The object transform calculated from the SIFT feature matches provides
+ a good initial guess for the ICP alignment stage.
+ The ICP refinement stage is then able to use a greater amount of surface
+ information (from the dense surface point cloud) to calculate a more accurate
+ object pose.
+\end_layout
+
+\begin_layout Standard
+First, we try to match every object-view to the scene based on SIFT features,
+ using the matching method presented in Chapter 3.
+ We take the object-view with the highest number of features that match
+ the scene features as the best candidate view.
+ If the best candidate view has less than four matching features, we use
+ that as a signal that the object is not present in the scene.
+ 
+\end_layout
+
+\begin_layout Standard
+The result of the feature match between the best candidate object-view and
+ the scene is a set of feature match pairs, each pair consisting of an object
+ feature and a corresponding scene feature.
+ Each object feature has a 3D position in object space, and each scene feature
+ has a 3D position in world space.
+ The next step is to find an object transform 
+\begin_inset Formula $T$
+\end_inset
+
+ (consisting of a 
+\begin_inset Formula $3\times3$
+\end_inset
+
+ rotation matrix and a translation vector) such that the distance between
+ the transformed object feature and the corresponding scene feature is minimised.
+ This is done using the Singular Value Decomposition method described in
+ Section 
+\begin_inset CommandInset ref
+LatexCommand ref
+reference "sub:Aligning-points"
+
+\end_inset
+
+.
+\end_layout
+
+\begin_layout Standard
+Next, we use this transform as an initial approximation for the object's
+ pose for a refinement stage using ICP.
+ We apply the transform to all of the surface points of the object, and
+ perform an ICP alignment between the scene point cloud and the surface
+ point cloud.
+ The final output is the transform describing the pose of the object in
+ the scene.
+\end_layout
+
+\begin_layout Subsection
+Results
+\end_layout
+
+\begin_layout Standard
+To test the recognition and localisation performance of the reconstructed
+ object models we carried out a series of tests.
+ Each test involved placing the target object in the scene in one of six
+ positions and in one of three orientations (each of which corresponds to
+ a different aspect facing the camera).
+ Each test is carried out three times, for a total of 54 iterations per
+ object.
+ Furthermore, these tests are carried out both with and without the ICP
+ refinement stage.
+ For each test we record the position error of the object and the angular
+ error of the orientation.
+ The average errors are presented for each aspect facing the camera.
+ Figure 
+\begin_inset CommandInset ref
+LatexCommand ref
+reference "fig:test-localisation"
+
+\end_inset
+
+ shows an example experimental set up for the box object.
+\end_layout
+
+\begin_layout Standard
+\begin_inset Float figure
+wide false
+sideways false
+status open
+
+\begin_layout Plain Layout
+\align center
+\begin_inset Graphics
+	filename images/DSC00799.JPG
+	width 50text%
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Plain Layout
+\begin_inset Caption
+
+\begin_layout Plain Layout
+\begin_inset Argument
+status open
+
+\begin_layout Plain Layout
+Object localisation test workspace setup.
+\end_layout
+
+\end_inset
+
+The test object (in this case the box object) is placed in the scene at
+ a predefined position and orientation.
+ The robot localises the object using SIFT feature matching and ICP refinement.
+\begin_inset CommandInset label
+LatexCommand label
+name "fig:test-localisation"
+
+\end_inset
+
+
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+The results for the box and cylinder objects are presented in Tables 
+\begin_inset CommandInset ref
+LatexCommand ref
+reference "tab:box-res"
+
+\end_inset
+
+ and 
+\begin_inset CommandInset ref
+LatexCommand ref
+reference "tab:can-res"
+
+\end_inset
+
+ respectively.
+ With the truck, we only used two orientations for testings, with wheels
+ on the table, and with the truck on its back.
+ These results are presented in Table 
+\begin_inset CommandInset ref
+LatexCommand ref
+reference "tab:truck-res"
+
+\end_inset
+
+.
+\end_layout
+
+\begin_layout Standard
+\begin_inset Float table
+wide false
+sideways false
+status open
+
+\begin_layout Plain Layout
+\align center
+
+\series bold
+Box Pose Estimate Errors
+\end_layout
+
+\begin_layout Plain Layout
+\begin_inset VSpace defskip
+\end_inset
+
+
+\end_layout
+
+\begin_layout Plain Layout
+\align center
+\begin_inset Tabular
+<lyxtabular version="3" rows="5" columns="5">
+<features tabularvalignment="middle">
+<column alignment="center" valignment="top" width="0pt">
+<column alignment="center" valignment="top" width="0">
+<column alignment="center" valignment="top" width="0">
+<column alignment="center" valignment="top" width="0">
+<column alignment="center" valignment="top" width="0">
+<row>
+<cell alignment="center" valignment="top" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+
+\end_layout
+
+\end_inset
+</cell>
+<cell multicolumn="1" alignment="center" valignment="top" topline="true" bottomline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+
+\series bold
+SIFT Only
+\end_layout
+
+\end_inset
+</cell>
+<cell multicolumn="2" alignment="center" valignment="top" topline="true" bottomline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+
+\end_layout
+
+\end_inset
+</cell>
+<cell multicolumn="1" alignment="center" valignment="top" topline="true" bottomline="true" leftline="true" rightline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+
+\series bold
+SIFT+ICP
+\end_layout
+
+\end_inset
+</cell>
+<cell multicolumn="2" alignment="center" valignment="top" topline="true" bottomline="true" leftline="true" rightline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+
+\end_layout
+
+\end_inset
+</cell>
+</row>
+<row>
+<cell alignment="center" valignment="top" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+Position Err.
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+Orientation Err.
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+Position Err.
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" rightline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+Orientation Err.
+\end_layout
+
+\end_inset
+</cell>
+</row>
+<row>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+Aspect 1
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+\begin_inset Formula $1.35cm$
+\end_inset
+
+ 
+\begin_inset Formula $(0.08)$
+\end_inset
+
+
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+\begin_inset Formula $1.32\textdegree$
+\end_inset
+
+ 
+\begin_inset Formula $(0.43)$
+\end_inset
+
+
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+\begin_inset Formula $0.82cm$
+\end_inset
+
+ 
+\begin_inset Formula $(0.19$
+\end_inset
+
+)
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" rightline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+\begin_inset Formula $0.99\textdegree$
+\end_inset
+
+ 
+\begin_inset Formula $(0.38)$
+\end_inset
+
+
+\end_layout
+
+\end_inset
+</cell>
+</row>
+<row>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+Aspect 2
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+\begin_inset Formula $2.09cm$
+\end_inset
+
+ 
+\begin_inset Formula $(0.31)$
+\end_inset
+
+
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+\begin_inset Formula $1.39\textdegree$
+\end_inset
+
+ 
+\begin_inset Formula $(0.56)$
+\end_inset
+
+
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+\begin_inset Formula $1.00cm$
+\end_inset
+
+ 
+\begin_inset Formula $(0.18)$
+\end_inset
+
+
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" rightline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+\begin_inset Formula $1.58\textdegree$
+\end_inset
+
+ 
+\begin_inset Formula $(0.44)$
+\end_inset
+
+
+\end_layout
+
+\end_inset
+</cell>
+</row>
+<row>
+<cell alignment="center" valignment="top" topline="true" bottomline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+Aspect 3
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" bottomline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+\begin_inset Formula $1.96cm$
+\end_inset
+
+ 
+\begin_inset Formula $(0.38)$
+\end_inset
+
+
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" bottomline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+\begin_inset Formula $7.66\textdegree$
+\end_inset
+
+ 
+\begin_inset Formula $(2.58)$
+\end_inset
+
+
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" bottomline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+\begin_inset Formula $0.87cm$
+\end_inset
+
+ 
+\begin_inset Formula $(0.14$
+\end_inset
+
+)
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" bottomline="true" leftline="true" rightline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+\begin_inset Formula $1.44\textdegree$
+\end_inset
+
+ 
+\begin_inset Formula $(0.39)$
+\end_inset
+
+
+\end_layout
+
+\end_inset
+</cell>
+</row>
+</lyxtabular>
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Plain Layout
+\begin_inset Caption
+
+\begin_layout Plain Layout
+The average position and orientation errors of localising the box object
+ in a scene.
+ This is done for three different aspects of the box facing the camera.
+ Localisation is performed using only SIFT features, and using SIFT features
+ followed by Iterative Closest Point (ICP) refinement.
+ The 
+\begin_inset Formula $95\%$
+\end_inset
+
+ confidence interval is given in parentheses in the same units as the error
+ value.
+\begin_inset CommandInset label
+LatexCommand label
+name "tab:box-res"
+
+\end_inset
+
+
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+\begin_inset Float table
+wide false
+sideways false
+status open
+
+\begin_layout Plain Layout
+\align center
+
+\series bold
+Cylinder Pose Estimate Errors
+\end_layout
+
+\begin_layout Plain Layout
+\begin_inset VSpace defskip
+\end_inset
+
+
+\end_layout
+
+\begin_layout Plain Layout
+\align center
+\begin_inset Tabular
+<lyxtabular version="3" rows="5" columns="5">
+<features tabularvalignment="middle">
+<column alignment="center" valignment="top" width="0pt">
+<column alignment="center" valignment="top" width="0">
+<column alignment="center" valignment="top" width="0">
+<column alignment="center" valignment="top" width="0">
+<column alignment="center" valignment="top" width="0">
+<row>
+<cell alignment="center" valignment="top" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+
+\end_layout
+
+\end_inset
+</cell>
+<cell multicolumn="1" alignment="center" valignment="top" topline="true" bottomline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+
+\series bold
+SIFT Only
+\end_layout
+
+\end_inset
+</cell>
+<cell multicolumn="2" alignment="center" valignment="top" topline="true" bottomline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+
+\end_layout
+
+\end_inset
+</cell>
+<cell multicolumn="1" alignment="center" valignment="top" topline="true" bottomline="true" leftline="true" rightline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+
+\series bold
+SIFT+ICP
+\end_layout
+
+\end_inset
+</cell>
+<cell multicolumn="2" alignment="center" valignment="top" topline="true" bottomline="true" leftline="true" rightline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+
+\end_layout
+
+\end_inset
+</cell>
+</row>
+<row>
+<cell alignment="center" valignment="top" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+Position Err.
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+Orientation Err.
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+Position Err.
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" rightline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+Orientation Err.
+\end_layout
+
+\end_inset
+</cell>
+</row>
+<row>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+Aspect 1
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+\begin_inset Formula $2.32cm$
+\end_inset
+
+ 
+\begin_inset Formula $(0.54)$
+\end_inset
+
+
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+\begin_inset Formula $7.44\textdegree$
+\end_inset
+
+ 
+\begin_inset Formula $(6.70)$
+\end_inset
+
+
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+\begin_inset Formula $0.83cm$
+\end_inset
+
+ 
+\begin_inset Formula $(0.22$
+\end_inset
+
+)
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" rightline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+\begin_inset Formula $2.57\textdegree$
+\end_inset
+
+ 
+\begin_inset Formula $(2.46)$
+\end_inset
+
+
+\end_layout
+
+\end_inset
+</cell>
+</row>
+<row>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+Aspect 2
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+\begin_inset Formula $1.09cm$
+\end_inset
+
+ 
+\begin_inset Formula $(0.35)$
+\end_inset
+
+
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+\begin_inset Formula $5.50\textdegree$
+\end_inset
+
+ 
+\begin_inset Formula $(1.77)$
+\end_inset
+
+
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+\begin_inset Formula $0.86cm$
+\end_inset
+
+ 
+\begin_inset Formula $(0.21)$
+\end_inset
+
+
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" rightline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+\begin_inset Formula $2.11\textdegree$
+\end_inset
+
+ 
+\begin_inset Formula $(0.80)$
+\end_inset
+
+
+\end_layout
+
+\end_inset
+</cell>
+</row>
+<row>
+<cell alignment="center" valignment="top" topline="true" bottomline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+Aspect 3
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" bottomline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+\begin_inset Formula $2.63cm$
+\end_inset
+
+ 
+\begin_inset Formula $(0.34)$
+\end_inset
+
+
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" bottomline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+\begin_inset Formula $7.73\textdegree$
+\end_inset
+
+ 
+\begin_inset Formula $(4.58)$
+\end_inset
+
+
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" bottomline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+\begin_inset Formula $0.69cm$
+\end_inset
+
+ 
+\begin_inset Formula $(0.19$
+\end_inset
+
+)
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" bottomline="true" leftline="true" rightline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+\begin_inset Formula $3.09\textdegree$
+\end_inset
+
+ 
+\begin_inset Formula $(1.14)$
+\end_inset
+
+
+\end_layout
+
+\end_inset
+</cell>
+</row>
+</lyxtabular>
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Plain Layout
+\begin_inset Caption
+
+\begin_layout Plain Layout
+The average position and orientation errors of localising the cylinder object
+ in a scene.
+ This is done for three different aspects of the cylinder facing the camera.
+ Localisation is performed using only SIFT features, and using SIFT features
+ followed by Iterative Closest Point (ICP) refinement.
+ The 
+\begin_inset Formula $95\%$
+\end_inset
+
+ confidence interval is given in parentheses in the same units as the error
+ value.
+\begin_inset CommandInset label
+LatexCommand label
+name "tab:can-res"
+
+\end_inset
+
+
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Plain Layout
+
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+\begin_inset Float table
+wide false
+sideways false
+status open
+
+\begin_layout Plain Layout
+\align center
+
+\series bold
+Truck Pose Estimate Errors
+\end_layout
+
+\begin_layout Plain Layout
+\begin_inset VSpace defskip
+\end_inset
+
+
+\end_layout
+
+\begin_layout Plain Layout
+\align center
+\begin_inset Tabular
+<lyxtabular version="3" rows="4" columns="5">
+<features tabularvalignment="middle">
+<column alignment="center" valignment="top" width="0pt">
+<column alignment="center" valignment="top" width="0pt">
+<column alignment="center" valignment="top" width="0pt">
+<column alignment="center" valignment="top" width="0">
+<column alignment="center" valignment="top" width="0pt">
+<row>
+<cell alignment="center" valignment="top" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+
+\end_layout
+
+\end_inset
+</cell>
+<cell multicolumn="1" alignment="center" valignment="top" topline="true" bottomline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+
+\series bold
+SIFT Only
+\end_layout
+
+\end_inset
+</cell>
+<cell multicolumn="2" alignment="center" valignment="top" topline="true" bottomline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+
+\end_layout
+
+\end_inset
+</cell>
+<cell multicolumn="1" alignment="center" valignment="top" topline="true" bottomline="true" leftline="true" rightline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+
+\series bold
+SIFT+ICP
+\end_layout
+
+\end_inset
+</cell>
+<cell multicolumn="2" alignment="center" valignment="top" topline="true" bottomline="true" leftline="true" rightline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+
+\end_layout
+
+\end_inset
+</cell>
+</row>
+<row>
+<cell alignment="center" valignment="top" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+Position Err.
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+Orientation Err.
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+Position Err.
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" rightline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+Orientation Err.
+\end_layout
+
+\end_inset
+</cell>
+</row>
+<row>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+Aspect 1
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+\begin_inset Formula $7.11cm$
+\end_inset
+
+ 
+\begin_inset Formula $(3.38)$
+\end_inset
+
+
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+\begin_inset Formula $17.87\textdegree$
+\end_inset
+
+ 
+\begin_inset Formula $(11.00)$
+\end_inset
+
+
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+\begin_inset Formula $4.72cm$
+\end_inset
+
+ 
+\begin_inset Formula $(2.55$
+\end_inset
+
+)
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" leftline="true" rightline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+\begin_inset Formula $14.61\textdegree$
+\end_inset
+
+ 
+\begin_inset Formula $(8.99)$
+\end_inset
+
+
+\end_layout
+
+\end_inset
+</cell>
+</row>
+<row>
+<cell alignment="center" valignment="top" topline="true" bottomline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+Aspect 2
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" bottomline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+\begin_inset Formula $11.11cm$
+\end_inset
+
+ 
+\begin_inset Formula $(2.77)$
+\end_inset
+
+
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" bottomline="true" leftline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+\begin_inset Formula $30.65\textdegree$
+\end_inset
+
+ 
+\begin_inset Formula $(12.94)$
+\end_inset
+
+
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" bottomline="true" leftline="true" rightline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+\begin_inset Formula $6.82cm$
+\end_inset
+
+ 
+\begin_inset Formula $(2.32)$
+\end_inset
+
+
+\end_layout
+
+\end_inset
+</cell>
+<cell alignment="center" valignment="top" topline="true" bottomline="true" leftline="true" rightline="true" usebox="none">
+\begin_inset Text
+
+\begin_layout Plain Layout
+\begin_inset Formula $30.88\textdegree$
+\end_inset
+
+ 
+\begin_inset Formula $(12.71)$
+\end_inset
+
+
+\end_layout
+
+\end_inset
+</cell>
+</row>
+</lyxtabular>
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Plain Layout
+\begin_inset Caption
+
+\begin_layout Plain Layout
+The average position and orientation errors of localising the truck object
+ in a scene.
+ This is done for two different aspects of the box facing the camera.
+ Localisation is performed using only SIFT features, and using SIFT features
+ followed by Iterative Closest Point (ICP) refinement.
+ The 
+\begin_inset Formula $95\%$
+\end_inset
+
+ confidence interval is given in parentheses in the same units as the error
+ value.
+\begin_inset CommandInset label
+LatexCommand label
+name "tab:truck-res"
+
+\end_inset
+
+
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+It can be seen that the accuracy of the object localisation is high for
+ the box and cylinder objects, with a clear improvement when ICP is used
+ for refinement.
+ With the truck object, however, accuracy is very poor.
+ We discuss the reasons for this in the next section.
+\end_layout
+
+\begin_layout Section
+Conclusion and Future Work
+\begin_inset CommandInset label
+LatexCommand label
+name "sec:Conclusion"
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+We have presented an object reconstruction system building on the feature
+ matching and segmentation methods introduced in Chapter 3 and Chapter 4.
+ This system enables a robot to autonomously learn an all aspect appearance
+ and shape model of an object in a complex environment.
+ This model is then used to recognise and localise the object in a scene.
+ 
+\end_layout
+
+\begin_layout Standard
+However, there are some issues with the approach and areas that can be improved
+ in future work.
+ First, the object recognition and localisation performance for the truck
+ was very poor.
+ This is in contrast to the good performance for the box and cylinder objects.
+ This poor performance is due to the way light interacts with the truck.
+ The truck is largely composed of flat, single coloured facets that produce
+ specular reflections.
+ This means that the apparent colour of a given facet is strongly dependent
+ on the intensity and angle of incidence of the light (example shown in
+ Figure 
+\begin_inset CommandInset ref
+LatexCommand ref
+reference "fig:lighting-effects"
+
+\end_inset
+
+).
+ The relative colour/brightness of adjacent facets is also strongly affected
+ by the relative light position.
+ As a result the appearance of the truck in the camera image changes significant
+ly depending on the lighting conditions.
+ This in turn means that the SIFT features (which are calculated based on
+ small image neighbourhoods) of the learned model can differ greatly compared
+ to the features of the truck placed in the scene, resulting in poor recognition
+ and localisation performance.
+ A further problem is caused by the fact that a single image of the truck
+ has many similar SIFT features.
+ This is because there is very little difference in the local appearance
+ of the different corners and edges of the flat facets of the truck.
+ The box and cylinder, on the other hand, have diffuse surfaces that have
+ coloured patterns and textures.
+ In this case, the appearance of the object in the camera image is less
+ dependent on the relative light position, which results in similar SIFT
+ features between the learned model and a test scene image.
+ This problem may be overcome using a different local image feature algorithms
+ (eg: SURF 
+\begin_inset CommandInset citation
+LatexCommand cite
+key "3_Bay_surf"
+
+\end_inset
+
+), a mixture of different types of features, or by learning the appearance
+ of the objects in several different lighting conditions.
+\end_layout
+
+\begin_layout Standard
+\begin_inset Float figure
+wide false
+sideways false
+status open
+
+\begin_layout Plain Layout
+\align center
+\begin_inset Graphics
+	filename images/truck_light2.JPG
+	width 80text%
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Plain Layout
+\begin_inset VSpace defskip
+\end_inset
+
+
+\end_layout
+
+\begin_layout Plain Layout
+\align center
+\begin_inset Graphics
+	filename images/truck_light1.JPG
+	width 80text%
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Plain Layout
+\begin_inset Caption
+
+\begin_layout Plain Layout
+\begin_inset Argument
+status open
+
+\begin_layout Plain Layout
+Faceted lighting and self-shadowing of truck object.
+\end_layout
+
+\end_inset
+
+With flat coloured specular surfaces, the image colour depends strongly
+ on the scene lighting.
+ As the lighting changes, the object's local appearance can change significantly.
+ This is shown in the above pair of images, with different light positions
+ in the left and right images.
+\begin_inset CommandInset label
+LatexCommand label
+name "fig:lighting-effects"
+
+\end_inset
+
+ 
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Plain Layout
+
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+A further area for improvement is how the robot observes the different aspects
+ of the object during object-view acquisition.
+ Currently, the object is moved in a linear motion while being rotated around
+ a single axis.
+ This motion is repeated with the object grasped in an orthogonal grasp
+ for the robot to observe the areas of the object occluded by the gripper.
+ The two separate models are then merged.
+ One of the problems of this approach is that the directions from which
+ the object is observed are not uniformly distributed, with some aspects
+ of the object having less coverage than others.
+ This potentially reduces the feature matching accuracy, and subsequently
+ the object localisation accuracy, if the object is observed from an angle
+ that was not covered during learning.
+ A solution to this problem is to keep track of the aspects of the object
+ which have been learned and to dynamically choose which aspects to observe,
+ also taking into account occlusions by the robot arm 
+\begin_inset CommandInset citation
+LatexCommand cite
+key "5_manipulator_object_modeling"
+
+\end_inset
+
+ 
+\begin_inset CommandInset citation
+LatexCommand cite
+key "5_view_planning_reconstruction"
+
+\end_inset
+
+.
+\end_layout
+
+\begin_layout Standard
+The third issue is our use of a relatively simple geometric model for fitting
+ to the object's surface point cloud.
+ We use a super-ellipsoid parametric model, which can represent a narrow
+ class of shapes.
+ In the future this should be improved by fitting a more general geometric
+ model, such as a triangular mesh, to the point cloud.
+ This would allow a wider variety of shapes to be represented.
+\end_layout
+
+\begin_layout Standard
+Finally, we have not rigorously addressed the issue of loop closure (Section
+ 
+\begin_inset CommandInset ref
+LatexCommand ref
+reference "sub:Loop-Closure"
+
+\end_inset
+
+) when stitching together the different object-views.
+ Loop closure refers to the problem of handling accumulated errors as the
+ adjacent object-views are stitched together, which results in a potentially
+ large final error.
+ We found that in our case the accumulated errors were not large enough
+ to be noticeable.
+ However, it is possible that with different objects it can be a problem.
+ There are many existing approaches for loop closure for stitching together
+ different views and point clouds 
+\begin_inset CommandInset citation
+LatexCommand cite
+key "5_loop_closure1"
+
+\end_inset
+
+ 
+\begin_inset CommandInset citation
+LatexCommand cite
+key "5_loop_closure2"
+
+\end_inset
+
+ 
+\begin_inset CommandInset citation
+LatexCommand cite
+key "5_loop_closure3"
+
+\end_inset
+
+, involving for example global graph optimisation methods, and should be
+ considered for future versions of this system.
+\end_layout
+
+\begin_layout Standard
+In this chapter we have demonstrated that the methods introduced in Chapter
+ 3 and Chapter 4 can be used to build a system for a robot to autonomously
+ learn an all-aspect appearance and shape model of a previously unknown
+ object.
+ The next step is for the robot to learn the physical properties of an object.
+ Knowing shape and appearance is not sufficient to reliably manipulate and
+ use the object to complete a task.
+ The object may have some physical or internal properties that affect its
+ behaviour, properties which cannot be determined by passive observation
+ (eg: centre of mass).
+ In this case, the robot must actively interact with the object, performing
+ experiments to build an object model of these properties.
+ This problem is addressed in the next chapter.
+\end_layout
+
+\end_body
+\end_document

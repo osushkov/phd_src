@@ -1,0 +1,210 @@
+import sys
+import os
+
+### Stuff you might want to change ###
+
+LIBRARY_SOURCES = [
+    'src/CameraController.cpp',
+    'src/Object.cpp',
+    'src/ObjectSceneMatch.cpp',
+    'src/ObjectPoseFilter.cpp',
+    'src/SceneBestFit.cpp',
+    'src/Settings.cpp',
+    'src/Control.cpp',
+    'src/MainController.cpp',
+    'src/Console.cpp',
+    'src/CorrelatedFrames/CorrelatedFrameParser.cpp',
+    'src/CorrelatedFrames/CorrelatedFrameLearner.cpp',
+    'src/Evaluation/MemoryEvaluator.cpp',
+    'src/SilhouetteMatch/ObjectShapeVerifier.cpp',
+    'src/SilhouetteMatch/SilhouetteEval.cpp',
+
+    'src/Camera/Camera.cpp',
+    'src/Camera/RemoteCamera.cpp',
+    'src/Camera/PlaybackCamera.cpp',
+    'src/Camera/Recorder.cpp',
+
+    'src/ObjectLearner/ObjectLearner.cpp',
+    'src/ObjectLearner/SpacioTemporalLocality.cpp', 
+    'src/ObjectLearner/TraceTracker.cpp',
+    'src/ObjectLearner/FrameHistoryBuffer.cpp',
+    'src/ObjectFinder.cpp',
+
+    'src/Arm/Arm.cpp',
+    'src/Arm/RemoteArm.cpp',
+    'src/Arm/ArmForwardKinematics.cpp',
+    'src/Arm/ArmInverseKinematics.cpp',
+    'src/Arm/IKFitnessFunctionNearest.cpp',
+    'src/Arm/IKFitnessFunctionObjectPickup.cpp',
+
+    'src/Features/StereoFeatureCorrelation.cpp',
+    'src/Features/SIFTGenerator.cpp',
+    'src/Features/FeatureMemory/FeatureMemory.cpp',
+    'src/Features/FeatureMemory/MemoryValidator.cpp',
+    'src/Features/FeatureMemory/kdtree.cpp',
+    'src/Features/FeatureMemory/minpq.cpp',
+    'src/Features/FeatureMemory/ObjectSnapshotDB.cpp',
+    'src/Features/FeatureMemory/ObjectSnapshot.cpp',
+    'src/Features/FeatureMemory/ObjectSnapshotDBMono.cpp',
+    'src/Features/FeatureMemory/ObjectSnapshotMono.cpp',
+    'src/Features/SIFT/imgfeatures.cpp',
+    'src/Features/SIFT/utils.cpp',
+    'src/Features/SIFT/sift.cpp',
+
+    'src/Util/Common.cpp',
+    'src/Util/Geometry.cpp',
+    'src/Util/Timer.cpp',
+    'src/Util/Semaphore.cpp',
+    'src/Util/ReadWriteLock.cpp',
+    'src/Util/ParallelServer.cpp',
+    'src/Util/ConvexHull.cpp',
+    'src/Util/PerfStats.cpp',
+    'src/Util/DebugVisualiser.cpp',
+    'src/Util/MinCut.cpp',
+
+    'src/OptimiserClass/NelderMead.cpp',
+    'src/OptimiserClass/ParticleSwarm.cpp',
+
+    'src/Demos/BallPickup.cpp',
+
+    'src/Visualisation/GraphicsBase.cpp',
+    'src/Visualisation/SceneRenderer.cpp',
+    'src/Visualisation/TextureManager.cpp',
+    'src/Visualisation/PointCloudRenderObject.cpp',
+    'src/Visualisation/LinkedPointsRenderObject.cpp',
+    'src/Visualisation/CylinderRenderObject.cpp',
+    'src/Visualisation/SuperQuadricRenderObject.cpp',
+    'src/Visualisation/MeshRenderObject.cpp',
+
+    'src/Reconstruction/ReconstructionManager.cpp',
+    'src/Reconstruction/BestFit.cpp',
+    'src/Reconstruction/SuperQuadric.cpp',
+    'src/Reconstruction/SuperQuadricBestFit.cpp',
+    'src/Reconstruction/CentralisePoints.cpp',
+    'src/Reconstruction/RawPointCloud.cpp',
+]
+
+BINARY_SOURCES = ['src/main.cpp']
+
+DIST_SOURCES = LIBRARY_SOURCES + [
+    'src/Mesh.h',
+    'src/CameraController.h',
+    'src/Object.h',
+    'src/ObjectSceneMatch.h',
+    'src/ObjectPoseFilter.h',
+    'src/ObjectShapeVerifier.h',
+    'src/SceneBestFit.h',
+    'src/MainController.h',
+    'src/Console.h',
+    'src/CorrelatedFrames/CorrelatedFrameParser.h',
+    'src/CorrelatedFrames/CorrelatedFrameLearner.h',
+    'src/Evaluation/MemoryEvaluator.h',
+    'src/SilhouetteMatch/ObjectShapeVerifier.h',
+    'src/SilhouetteMatch/SilhouetteEval.h',
+
+    'src/Camera/Camera.h',
+    'src/Camera/RemoteCamera.h',
+    'src/Camera/PlaybackCamera.h',
+    'src/Camera/Recorder.h',
+
+    'src/ObjectLearner/ObjectLearner.h',
+    'src/ObjectLearner/SpacioTemporalLocality.h',
+    'src/ObjectLearner/TraceTracker.h',
+    'src/ObjectLearner/FrameHistoryBuffer.h',
+
+    'src/ObjectFinder.h',
+    'src/Arm/Arm.h',
+    'src/Arm/RemoteArm.h',
+    'src/Arm/DummyArm.h',
+    'src/Arm/ArmProtocol.h',
+    'src/Arm/ArmForwardKinematics.h',
+    'src/Arm/ArmInverseKinematics.h',
+    'src/Arm/ArmJointLimits.h',
+    'src/Arm/IKCommon.h',
+    'src/Arm/IKFitnessFunctionNearest.h',
+    'src/Arm/IKFitnessFunctionObjectPickup.h',
+    'src/Settings.h',
+    'src/Control.h',
+
+    'src/Features/StereoFeature.h',
+    'src/Features/StereoFeatureCorrelation.h',
+    'src/Features/SIFTGenerator.h',
+    'src/Features/FeatureMemory/FeatureMemory.h',
+    'src/Features/FeatureMemory/MemoryValidator.h',
+    'src/Features/FeatureMemory/kdtree.h',
+    'src/Features/FeatureMemory/minpq.h',
+    'src/Features/FeatureMemory/ObjectSnapshotDB.h',
+    'src/Features/FeatureMemory/ObjectSnapshot.h',
+    'src/Features/FeatureMemory/ObjectSnapshotDBMono.h',
+    'src/Features/FeatureMemory/ObjectSnapshotMono.h',
+    'src/Features/SIFT/imgfeatures.h',
+    'src/Features/SIFT/utils.h',
+    'src/Features/SIFT/sift.h',
+
+    'src/Util/Common.h',
+    'src/Util/Geometry.h',
+    'src/Util/Timer.h',
+    'src/Util/Semaphore.h',
+    'src/Util/ReadWriteLock.h',
+    'src/Util/ParallelServer.h',
+    'src/Util/Vector3D.h',
+    'src/Util/Vector2D.h',
+    'src/Util/Matrix.h',
+    'src/Util/Transform.h',
+    'src/Util/ConvexHull.h',
+    'sec/Util/PerfStats.h',
+    'src/Util/DebugVisualiser.h',
+    'src/Util/Octree.h',
+    'src/Util/Octree.hpp', 
+    'src/Util/MinCut.h',
+    
+    'src/OptimiserClass/Common.h',
+    'src/OptimiserClass/Optimiser.h',
+    'src/OptimiserClass/NelderMead.h',
+    'src/OptimiserClass/ParticleSwarm.h',
+    'src/Demos/BallPickup.h',
+
+    'src/Visualisation/GraphicsBase.h',
+    'src/Visualisation/SceneRenderer.h',
+    'src/Visualisation/TextureManager.h',
+    'src/Visualisation/RenderObject.h',
+    'src/Visualisation/PointCloudRenderObject.h',
+    'src/Visualisation/LinkedPointsRenderObject.h',
+    'src/Visualisation/CylinderRenderObject.h',
+    'src/Visualisation/SuperQuadricRenderObject.h',
+    'src/Visualisation/MeshRenderObject.h',
+
+    'src/Reconstruction/ReconstructionManager.h'
+    'src/Reconstruction/ReconstructionFrame.h',
+    'src/Reconstruction/BestFit.h',
+    'src/Reconstruction/SuperQuadric.h',
+    'src/Reconstruction/SuperQuadricBestFit.h',
+    'src/Reconstruction/CentralisePoints.h',
+    'src/Reconstruction/RawPointCloud.h',
+]
+
+LIBS = ['cv', 'highgui', 'boost_thread-mt', 'pthread', 'GL', 'GLU', 'SDL']
+
+release_flags = '-Wall -D_REENTRANT -g -O3'
+debug_flags = '-Wall -D_REENTRANT -g -p -DDEBUG'
+
+### Stuff you probably don't need to change ###
+
+env = Environment()
+
+mode = ARGUMENTS.get('mode', 'debug')
+if mode == 'debug':
+    env.Append(CXXFLAGS = debug_flags)
+elif mode == 'release':
+    env.Append(CXXFLAGS = release_flags)
+else:
+    print "Unknown mode '%s%', use debug (default) or release" % mode
+    sys.exit(1)
+
+### compilation rules
+library_objects = [ env.Object(s, CXX = 'g++') for s in LIBRARY_SOURCES]
+binary_objects = [ env.Object(s, CXX = 'g++') for s in BINARY_SOURCES]
+
+objectlearn = env.Program('objectlearn', library_objects + binary_objects,
+                        CXX = 'g++', LIBS = LIBS)
+

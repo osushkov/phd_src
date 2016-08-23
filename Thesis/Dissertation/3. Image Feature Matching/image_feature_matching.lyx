@@ -1,0 +1,4978 @@
+#LyX 2.0 created this file. For more info see http://www.lyx.org/
+\lyxformat 413
+\begin_document
+\begin_header
+\textclass report
+\begin_preamble
+\let\oldpart\part
+\renewcommand{part}[1]{\oldpart{#1}
+\setcounter{section}{0}}
+\end_preamble
+\use_default_options true
+\master ../main.lyx
+\maintain_unincluded_children false
+\language english
+\language_package default
+\inputencoding auto
+\fontencoding global
+\font_roman default
+\font_sans default
+\font_typewriter default
+\font_default_family default
+\use_non_tex_fonts false
+\font_sc false
+\font_osf false
+\font_sf_scale 100
+\font_tt_scale 100
+
+\graphics default
+\default_output_format default
+\output_sync 0
+\bibtex_command default
+\index_command default
+\paperfontsize default
+\spacing single
+\use_hyperref false
+\papersize default
+\use_geometry false
+\use_amsmath 1
+\use_esint 1
+\use_mhchem 1
+\use_mathdots 1
+\cite_engine basic
+\use_bibtopic false
+\use_indices false
+\paperorientation portrait
+\suppress_date false
+\use_refstyle 1
+\index Index
+\shortcut idx
+\color #008000
+\end_index
+\secnumdepth 3
+\tocdepth 3
+\paragraph_separation indent
+\paragraph_indentation default
+\quotes_language english
+\papercolumns 1
+\papersides 1
+\paperpagestyle default
+\tracking_changes false
+\output_changes false
+\html_math_output 0
+\html_css_as_file 0
+\html_be_strict false
+\end_header
+
+\begin_body
+
+\begin_layout Standard
+\begin_inset Newpage cleardoublepage
+\end_inset
+
+
+\end_layout
+
+\begin_layout Chapter
+Image Feature Matching for Object Recognition
+\end_layout
+
+\begin_layout Standard
+In this chapter we present a method for matching learned local image features
+ (specifically SIFT 
+\begin_inset CommandInset citation
+LatexCommand cite
+key "3_Lowe_sift"
+
+\end_inset
+
+ features) to scene features, for the purpose of object recognition and
+ localisation.
+ Our approach differs from existing methods by taking into account the geometric
+ consistency of matched features concurrently with the description vector
+ similarity.
+ As a result we do not need to over-constrain the description vector matching
+ criteria as is the case with existing methods (see Section 
+\begin_inset CommandInset ref
+LatexCommand ref
+reference "sub:Appearance-Based-Recognition"
+
+\end_inset
+
+).
+ The outcome of our approach is a greater number of feature matches which
+ improves the accuracy of object recognition, as well as an improvement
+ in matching speed under certain circumstances.
+ The work presented in this chapter was published at the 2010 International
+ Conference on Control, Automation, Robotics and Vision (ICARCV) 
+\begin_inset CommandInset citation
+LatexCommand cite
+key "sushkov_local_feature_matching"
+
+\end_inset
+
+.
+\end_layout
+
+\begin_layout Section
+Introduction
+\end_layout
+
+\begin_layout Standard
+Local interest point detectors 
+\begin_inset CommandInset citation
+LatexCommand cite
+key "3_local_detector_survey"
+
+\end_inset
+
+ 
+\begin_inset CommandInset citation
+LatexCommand cite
+key "3_Schmid_evaluation"
+
+\end_inset
+
+ are a class of algorithms that can be used for object recognition and localisat
+ion in images.
+ Interest point detectors use a small neighbourhood of pixels around a point.
+ One particular interest point detector is the Scale Invariant Feature Transform
+ (SIFT) 
+\begin_inset CommandInset citation
+LatexCommand cite
+key "3_Lowe_sift"
+
+\end_inset
+
+ 
+\begin_inset CommandInset citation
+LatexCommand cite
+key "3_lowe_sift_object_recognition"
+
+\end_inset
+
+.
+ The SIFT algorithm generates highly discriminatory scale and rotation invariant
+ description vectors of the pixel neighbourhood around stable points (minima
+ and maxima in image scale space), coupled with the orientation of the image
+ gradient at this point and the scale of the pixel neighbourhood.
+ The SIFT algorithm is described in more detail in Section 
+\begin_inset CommandInset ref
+LatexCommand ref
+reference "sec:SIFT-Features"
+
+\end_inset
+
+.
+\end_layout
+
+\begin_layout Standard
+There are several steps required to recognise and localise an object in
+ an image using SIFT features (these steps also apply to many other interest
+ point descriptors).
+ First a database of object features is learned using training views of
+ the object.
+ The training views are typically
+\begin_inset Note Note
+status open
+
+\begin_layout Plain Layout
+cite
+\end_layout
+
+\end_inset
+
+ images of the object with either a blank or cleanly segmented background
+\begin_inset Note Note
+status open
+
+\begin_layout Plain Layout
+cite an example image
+\end_layout
+
+\end_inset
+
+.
+ These images can be generated either in a controlled environment (eg: turn
+ table with a clean background 
+\begin_inset CommandInset citation
+LatexCommand cite
+key "3_appearance_object_recognition"
+
+\end_inset
+
+), with a human performing background segmentation, or by autonomously separatin
+g object features from the background (see Chapter 4).
+\end_layout
+
+\begin_layout Standard
+The next step is to use the properties of each feature (such as the description
+ vector, gradient orientation, and image position) to match the scene features
+ against learned database features to find the object in the scene.
+ Figure 
+\begin_inset CommandInset ref
+LatexCommand ref
+reference "fig:example-feature-map"
+
+\end_inset
+
+ shows an example match between a reference image and scene image features.
+\end_layout
+
+\begin_layout Standard
+In this chapter we present an algorithm for feature matching that is more
+ accurate, flexible, and (under certain conditions) faster than existing
+ methods.
+ Our algorithm is focused on matching SIFT features, but in future may be
+ applied to other local interest point detectors.
+\end_layout
+
+\begin_layout Standard
+The main contribution of our approach is in combining the feature description
+ vector matching with the geometric consistency filtering stage.
+ Existing methods for SIFT feature matching consist of two distinct stages.
+ First matching individual scene image features to database features using
+ only the description vector, followed by filtering out incorrect matches
+ using a geometric consistency check.
+ Our method combines the two stages, using geometric consistency in parallel
+ with feature description vectors to determine the database to scene feature
+ mapping.
+ This is done by finding a small set of feature match pairs (between the
+ database and scene image) that have a high probability of forming a valid
+ correspondence.
+ This is determined using both the geometric relationship of the feature
+ positions and the feature description vectors.
+ This seed set of high confidence matches is then used to find additional
+ matches using a position constraint to speed up the search.
+\end_layout
+
+\begin_layout Standard
+The advantage of our approach is the relaxed criteria for feature description
+ vector matching, since geometric properties are used in conjunction to
+ find potential feature match pairs.
+ As a result, our algorithm achieves a higher percentage of correct feature
+ matches as compared to the existing matching method.
+ A further benefit of our approach is its structure allows scene knowledge
+ and temporal coherence to be used to greatly speed up the search for feature
+ matches.
+ Under certain conditions our algorithm is much faster than the existing
+ feature matching algorithm.
+\end_layout
+
+\begin_layout Standard
+\begin_inset Float figure
+wide false
+sideways false
+status collapsed
+
+\begin_layout Plain Layout
+\align center
+\begin_inset Graphics
+	filename images/feature_match_eg.png
+	width 50text%
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Plain Layout
+\begin_inset Caption
+
+\begin_layout Plain Layout
+An example feature mapping from a training image of an object (above) and
+ a cluttered scene containing that object (below).
+ Each line connects a matched SIFT feature pair in the two images.
+\begin_inset CommandInset label
+LatexCommand label
+name "fig:example-feature-map"
+
+\end_inset
+
+
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+In this chapter we present the following:
+\end_layout
+
+\begin_layout Itemize
+an overview of the SIFT algorithm (Section 
+\begin_inset CommandInset ref
+LatexCommand ref
+reference "sec:SIFT-Features"
+
+\end_inset
+
+),
+\end_layout
+
+\begin_layout Itemize
+current approach to matching features and it's associated shortcomings (Section
+ 
+\begin_inset CommandInset ref
+LatexCommand ref
+reference "sec:SIFT-Feature-Matching"
+
+\end_inset
+
+),
+\end_layout
+
+\begin_layout Itemize
+a detailed description of our matching algorithm (Section 
+\begin_inset CommandInset ref
+LatexCommand ref
+reference "sec:Bipartite-Feature-Matching"
+
+\end_inset
+
+),
+\end_layout
+
+\begin_layout Itemize
+performance evaluation and experimental results (Section 
+\begin_inset CommandInset ref
+LatexCommand ref
+reference "sec:Experiments-and-Results"
+
+\end_inset
+
+),
+\end_layout
+
+\begin_layout Itemize
+discussion of results (Section 
+\begin_inset CommandInset ref
+LatexCommand ref
+reference "sec:Discussion"
+
+\end_inset
+
+),
+\end_layout
+
+\begin_layout Itemize
+and potential avenues for future work (Section 
+\begin_inset CommandInset ref
+LatexCommand ref
+reference "sec:Future-Work"
+
+\end_inset
+
+).
+ 
+\end_layout
+
+\begin_layout Section
+SIFT Feature Generation
+\begin_inset CommandInset label
+LatexCommand label
+name "sec:SIFT-Features"
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+The SIFT algorithm is described in detail in a paper by D.
+ Lowe 
+\begin_inset CommandInset citation
+LatexCommand cite
+key "3_Lowe_sift"
+
+\end_inset
+
+.
+ This section presents a brief summary of the algorithm and it's application
+ for object recognition and localisation.
+ Extracting SIFT features from an image can be divided into several sequential
+ steps:
+\end_layout
+
+\begin_layout Enumerate
+
+\series bold
+Build a Difference of Gaussians pyramid.
+
+\series default
+ This is computed by taking the difference of adjacent pairs of images from
+ the scale-space pyramid.
+ The scale-space pyramid of an image is built by repeatedly convolving an
+ image with a Gaussian kernel.
+ The resulting image after each convolution forms a layer of the pyramid.
+\end_layout
+
+\begin_layout Enumerate
+
+\series bold
+Find the extrema points in the Difference of Gaussians pyramid.
+
+\series default
+ Each point in the pyramid has 26 neighbours, eight on the same scale and
+ nine each in the above and below scale.
+ The points that are the minimum or maximum of their 26 neighbours are the
+ extrema points.
+ These extrema are candidates for stable interest points.
+ These are typically found near corners and edges in an image at a given
+ scale.
+\end_layout
+
+\begin_layout Enumerate
+
+\series bold
+Rejection of unstable extrema points.
+
+\series default
+ Points with a low absolute value in the Difference of Gaussians pyramid
+ or points that are too 
+\emph on
+edge-like
+\emph default
+ are considered to have poor repeatability and unstable image locations
+ in the presence of noise.
+ This is because points located on edges are similar to nearby points, in
+ terms of their pixel neighbourhoods.
+ Principal curvature is used to measure the edge response at the extrema
+ point.
+ If the difference in principal curvature in the edge direction is very
+ different to the perpendicular direction, then the point is considered
+ to be poorly localised and is rejected.
+\end_layout
+
+\begin_layout Enumerate
+
+\series bold
+Orientation assignment.
+
+\series default
+ Each of the remaining key-points is assigned a principal orientation.
+ This is the most prominent gradient direction of a small neighbourhood
+ of pixels around the key-point.
+ Assigning an orientation to each point allows the key-point description
+ vector (described in the next step) to be represented in a rotation invariant
+ manner.
+\end_layout
+
+\begin_layout Enumerate
+
+\series bold
+Generation of key-point description vectors.
+
+\series default
+ For each key-point, a neighbourhood of pixels is used to build an array
+ of histograms of gradients.
+ The histograms are normalised to the principal orientation of the key-point
+ to make the descriptor vector rotation invariant.
+ Additionally, the histogram is normalised on gradient magnitude of the
+ pixel neighbourhood to increase robustness to changes in contrast and lighting.
+ The result is a 128-dimensional description vector for each key-point.
+\end_layout
+
+\begin_layout Standard
+The final output of these series of steps is a list of stable local image
+ features, each characterised by an 
+\begin_inset Formula $(x,y)$
+\end_inset
+
+ image position, primary gradient orientation angle, scale, and a 128-dimensiona
+l description vector.
+ It should be noted that SIFT uses a greyscale image.
+ To extract SIFT features from say an RGB colour image it must first be
+ converted to a single channel greyscale image.
+ Figure 
+\begin_inset CommandInset ref
+LatexCommand ref
+reference "fig:sift-feature-img"
+
+\end_inset
+
+ shows a representation of extracted SIFT features for a scene image.
+\end_layout
+
+\begin_layout Standard
+\begin_inset Float figure
+wide false
+sideways false
+status open
+
+\begin_layout Plain Layout
+\align center
+\begin_inset Graphics
+	filename images/sift_example.png
+	width 70text%
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Plain Layout
+\begin_inset Caption
+
+\begin_layout Plain Layout
+\begin_inset Argument
+status open
+
+\begin_layout Plain Layout
+Scene SIFT features.
+\end_layout
+
+\end_inset
+
+This image shows the SIFT features extracted from a scene image.
+ Each arrow corresponds to a single SIFT feature at the arrow's origin.
+ The length of the arrow represents the scale of the feature, and the direction
+ of the arrow indicates the feature's primary gradient orientation.
+\begin_inset CommandInset label
+LatexCommand label
+name "fig:sift-feature-img"
+
+\end_inset
+
+
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Section
+SIFT Feature Matching
+\begin_inset CommandInset label
+LatexCommand label
+name "sec:SIFT-Feature-Matching"
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+The first step in recognising an object in a scene image is to learn a database
+ of object features from a set of training images of the object.
+ These training images are prototypical views of the object from which SIFT
+ features are extracted and stored in a database.
+ The next step is to match these features against a scene image that may
+ contain a learned object.
+\end_layout
+
+\begin_layout Subsection
+Nearest-Neighbour Matching Overview
+\end_layout
+
+\begin_layout Standard
+The SIFT algorithm 
+\begin_inset CommandInset citation
+LatexCommand cite
+key "3_Lowe_sift"
+
+\end_inset
+
+ matches each scene feature independently to the learned database of features,
+ by comparing description vectors.
+ This is followed by a geometric consistency check, such as the Hough transform
+ 
+\begin_inset CommandInset citation
+LatexCommand cite
+key "3_Duda_hough"
+
+\end_inset
+
+ or RANSAC 
+\begin_inset CommandInset citation
+LatexCommand cite
+key "3_Fischler_ransac"
+
+\end_inset
+
+, to remove inconsistent matches and determine the position and orientation
+ of the object in the scene image.
+ 
+\end_layout
+
+\begin_layout Standard
+Nearest neighbour is used for matching scene to database feature.
+ For each scene feature the nearest database feature is found.
+ This is done using the Euclidean distance between the 128-dimensional descripti
+on vectors of the features as a metric.
+ This results in every scene feature having a corresponding matched database
+ feature, including many incorrect matches.
+ To reject spurious feature matches a global description vector distance
+ threshold may be used.
+ However, it was found
+\begin_inset Note Note
+status open
+
+\begin_layout Plain Layout
+cite
+\end_layout
+
+\end_inset
+
+ that not all SIFT features have equally discriminatory description vectors,
+ and therefore a single global threshold performs poorly 
+\begin_inset CommandInset citation
+LatexCommand cite
+key "3_lowe_sift_object_recognition"
+
+\end_inset
+
+.
+ Instead, a more effective approach is to compare the distance between the
+ nearest neighbour and the second-nearest neighbour in the database.
+ If the ratio of the distances to the nearest and second-nearest neighbours
+ is above a threshold value, the match is said to be spurious.
+ For this threshold, the value of 
+\begin_inset Formula $0.8$
+\end_inset
+
+ eliminates more than 
+\begin_inset Formula $90\%$
+\end_inset
+
+ of false matches while discarding less than 
+\begin_inset Formula $5\%$
+\end_inset
+
+ of true matches.
+ If the database of features contains multiples views of the same object,
+ then the second-nearest neighbour feature is redefined to be the nearest
+ feature that belongs to a different object than the first (closest) match.
+ This addresses the problem of matching the same object feature for both
+ the nearest and second-nearest neighbours.
+ This feature matching process is defined in detail in Algorithm 
+\begin_inset CommandInset ref
+LatexCommand ref
+reference "alg:Nearest-neighbour-feature-matchi"
+
+\end_inset
+
+.
+\end_layout
+
+\begin_layout Standard
+\begin_inset Note Note
+status open
+
+\begin_layout Plain Layout
+explain the geometric consistency check here as well? Such as Hough and
+ RANSAC removing outliers.
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+\begin_inset Float algorithm
+wide false
+sideways false
+status collapsed
+
+\begin_layout Plain Layout
+
+\series bold
+input:
+\series default
+ set of learned database features 
+\begin_inset Formula $\rightarrow D$
+\end_inset
+
+
+\end_layout
+
+\begin_layout Plain Layout
+
+\series bold
+input:
+\series default
+ set of scene feature 
+\begin_inset Formula $\rightarrow S$
+\end_inset
+
+
+\end_layout
+
+\begin_layout Plain Layout
+\begin_inset VSpace defskip
+\end_inset
+
+
+\end_layout
+
+\begin_layout Plain Layout
+\begin_inset Formula $matches\leftarrow\{\}$
+\end_inset
+
+
+\end_layout
+
+\begin_layout Plain Layout
+
+\series bold
+forall
+\series default
+ 
+\begin_inset Formula $s$
+\end_inset
+
+ 
+\series bold
+in
+\series default
+ 
+\begin_inset Formula $S$
+\end_inset
+
+
+\end_layout
+
+\begin_layout Plain Layout
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset Formula $s\_descr\_vec\leftarrow descriptionVector(s)$
+\end_inset
+
+
+\end_layout
+
+\begin_layout Plain Layout
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset Formula $min\_distance\leftarrow\inf$
+\end_inset
+
+
+\end_layout
+
+\begin_layout Plain Layout
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset Formula $closest\_feature\leftarrow null$
+\end_inset
+
+
+\end_layout
+
+\begin_layout Plain Layout
+\begin_inset VSpace defskip
+\end_inset
+
+
+\end_layout
+
+\begin_layout Plain Layout
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset space ~
+\end_inset
+
+
+\series bold
+forall
+\series default
+ 
+\begin_inset Formula $d$
+\end_inset
+
+
+\series bold
+ in
+\series default
+ 
+\begin_inset Formula $D$
+\end_inset
+
+
+\end_layout
+
+\begin_layout Plain Layout
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset Formula $d\_descr\_vec\leftarrow descriptionVector(d)$
+\end_inset
+
+
+\end_layout
+
+\begin_layout Plain Layout
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset space ~
+\end_inset
+
+
+\series bold
+if
+\series default
+ 
+\begin_inset Formula $\left|d\_descr\_vec-s\_descr\_vec\right|<min\_distance$
+\end_inset
+
+ 
+\series bold
+then
+\end_layout
+
+\begin_layout Plain Layout
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset Formula $min\_distance\leftarrow\left|d\_descr\_vec-s\_descr\_vec\right|$
+\end_inset
+
+
+\end_layout
+
+\begin_layout Plain Layout
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset Formula $closest\_feature\leftarrow d$
+\end_inset
+
+
+\end_layout
+
+\begin_layout Plain Layout
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset space ~
+\end_inset
+
+
+\series bold
+endif
+\end_layout
+
+\begin_layout Plain Layout
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset space ~
+\end_inset
+
+
+\series bold
+endfor
+\end_layout
+
+\begin_layout Plain Layout
+\begin_inset VSpace defskip
+\end_inset
+
+
+\end_layout
+
+\begin_layout Plain Layout
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset Formula $second\_min\_distance\leftarrow\inf$
+\end_inset
+
+
+\end_layout
+
+\begin_layout Plain Layout
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset space ~
+\end_inset
+
+
+\series bold
+forall
+\series default
+ 
+\begin_inset Formula $d$
+\end_inset
+
+
+\series bold
+ in
+\series default
+ 
+\begin_inset Formula $D$
+\end_inset
+
+
+\end_layout
+
+\begin_layout Plain Layout
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset space ~
+\end_inset
+
+
+\series bold
+if
+\series default
+ 
+\begin_inset Formula $parentObject(d)\neq parentObject(closest)$
+\end_inset
+
+ 
+\series bold
+then
+\end_layout
+
+\begin_layout Plain Layout
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset Formula $d\_descr\_vec\leftarrow descriptionVector(d)$
+\end_inset
+
+
+\end_layout
+
+\begin_layout Plain Layout
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset space ~
+\end_inset
+
+
+\series bold
+
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset space ~
+\end_inset
+
+if
+\series default
+ 
+\begin_inset Formula $\left|d\_descr\_vec-s\_descr\_vec\right|<second\_min\_distance$
+\end_inset
+
+ 
+\series bold
+then
+\end_layout
+
+\begin_layout Plain Layout
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset Formula $second\_min\_distance\leftarrow\left|d\_descr\_vec-s\_descr\_vec\right|$
+\end_inset
+
+
+\end_layout
+
+\begin_layout Plain Layout
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset space ~
+\end_inset
+
+
+\series bold
+
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset space ~
+\end_inset
+
+endif
+\end_layout
+
+\begin_layout Plain Layout
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset space ~
+\end_inset
+
+
+\series bold
+endif
+\end_layout
+
+\begin_layout Plain Layout
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset space ~
+\end_inset
+
+
+\series bold
+endfor
+\end_layout
+
+\begin_layout Plain Layout
+\begin_inset VSpace defskip
+\end_inset
+
+
+\end_layout
+
+\begin_layout Plain Layout
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset space ~
+\end_inset
+
+
+\series bold
+if
+\series default
+ 
+\begin_inset Formula $min\_distance\leq0.8\cdot second\_min\_distance$
+\end_inset
+
+ 
+\series bold
+then
+\end_layout
+
+\begin_layout Plain Layout
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset Formula $matches\leftarrow matches\cup\left\{ \left(s,closest\_feature\right)\right\} $
+\end_inset
+
+
+\end_layout
+
+\begin_layout Plain Layout
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset space ~
+\end_inset
+
+
+\series bold
+endif
+\end_layout
+
+\begin_layout Plain Layout
+
+\series bold
+endfor
+\end_layout
+
+\begin_layout Plain Layout
+\begin_inset VSpace defskip
+\end_inset
+
+
+\end_layout
+
+\begin_layout Plain Layout
+
+\series bold
+output:
+\series default
+ set of feature matches 
+\begin_inset Formula $\leftarrow matches$
+\end_inset
+
+
+\end_layout
+
+\begin_layout Plain Layout
+\begin_inset Caption
+
+\begin_layout Plain Layout
+Nearest-neighbour feature matching.
+\begin_inset CommandInset label
+LatexCommand label
+name "alg:Nearest-neighbour-feature-matchi"
+
+\end_inset
+
+
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Plain Layout
+
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Subsection
+Weaknesses of the Existing Algorithm
+\end_layout
+
+\begin_layout Standard
+The nearest-neighbour algorithms, described in the previous section, have
+ several distinct weaknesses, which we seek to improve upon with a new feature
+ matching method.
+ These weaknesses stem from several factors: the first is scene features
+ are matched to database features independent of one another and using only
+ the description vector, the second is constraining each scene feature to
+ only match its nearest neighbour in the database, and third the reliance
+ on the second-nearest neighbour for rejecting spurious matches.
+ We discuss each of these in turn.
+\end_layout
+
+\begin_layout Standard
+The first weakness is matching each feature independently followed by a
+ separate stage in which a geometric consistency check on the resulting
+ feature matches is performed.
+ This results in poor performance if the object to be matched has a regular
+ pattern texture that generates multiple SIFT feature with similar description
+ vectors.
+ In this case, the nearest-neighbour approaches are unlikely to generate
+ a geometrically consistent match for the similar features, as the initial
+ match is performed independently and purely on the description vectors.
+ An example of this is shown in Figure 
+\begin_inset CommandInset ref
+LatexCommand ref
+reference "fig:regular-pattern"
+
+\end_inset
+
+.
+ The correct and geometrically consistent mapping is shown on the left.
+ However, since the features do not have distinct feature vectors, it is
+ instead more likely that the matching stage will produce an incorrect mapping,
+ shown on the right.
+ This incorrect mapping would then be rejected by a geometric consistency
+ check, resulting in the object not being detected in the scene image.
+\end_layout
+
+\begin_layout Standard
+\begin_inset Float figure
+wide false
+sideways false
+status collapsed
+
+\begin_layout Plain Layout
+\begin_inset Graphics
+	filename images/ex3.png
+	width 100text%
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Plain Layout
+\begin_inset Caption
+
+\begin_layout Plain Layout
+\begin_inset Argument
+status open
+
+\begin_layout Plain Layout
+Feature mapping between scene and reference image.
+\end_layout
+
+\end_inset
+
+Consider an object with a regular pattern texture.
+ This regular pattern would give rise to multiple SIFT features (represented
+ by the red dots) with almost identical description vectors.
+ In this case, if the scene features are matched to the database features
+ independently, based only on the description vectors, the correct feature
+ mapping (left) is not guaranteed.
+ Instead an incorrect mapping may result (right), in which case these feature
+ matches would be discarded by a later geometric consistency check.
+\begin_inset CommandInset label
+LatexCommand label
+name "fig:regular-pattern"
+
+\end_inset
+
+
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+The second weakness refers to the constraint of matching a scene feature
+ only to its description vector nearest neighbour in the database.
+ This severely limits the potential matches for a feature.
+ If the geometric relationship of other feature matches are considered in
+ parallel, the correct match for a scene feature may not necessarily be
+ its nearest neighbour in the database.
+ Figure 
+\begin_inset CommandInset ref
+LatexCommand ref
+reference "fig:nearest-matching"
+
+\end_inset
+
+ shows a scenario in which the geometric relationship of a number of feature
+ matches is constraining the remaining feature match (
+\begin_inset Formula $F4$
+\end_inset
+
+).
+ But the suggested feature match is not considered as it is not the description
+ vector nearest neighbour match.
+ The end result of this is a lower number of feature matches between the
+ scene and learned database, which could lead to higher errors in the localisati
+on of an object or not recognising an object at all.
+\end_layout
+
+\begin_layout Standard
+\begin_inset Float figure
+wide false
+sideways false
+status collapsed
+
+\begin_layout Plain Layout
+\align center
+\begin_inset Graphics
+	filename images/match_example.png
+	width 70text%
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Plain Layout
+\begin_inset Caption
+
+\begin_layout Plain Layout
+\begin_inset Argument
+status open
+
+\begin_layout Plain Layout
+Nearest-neighbour feature mapping weakness.
+\end_layout
+
+\end_inset
+
+This diagram demonstrates a weakness of only considering nearest neighbour
+ feature matches.
+ In the above example, the scene features 
+\begin_inset Formula $F1$
+\end_inset
+
+, 
+\begin_inset Formula $F2$
+\end_inset
+
+, and 
+\begin_inset Formula $F3$
+\end_inset
+
+ are successfully matched against the correct corresponding object reference
+ features , 
+\begin_inset Formula $F1'$
+\end_inset
+
+, 
+\begin_inset Formula $F2'$
+\end_inset
+
+, and 
+\begin_inset Formula $F3'$
+\end_inset
+
+.
+ Consider that feature 
+\begin_inset Formula $F4$
+\end_inset
+
+ and 
+\begin_inset Formula $F4'$
+\end_inset
+
+ have similar description vectors, but 
+\begin_inset Formula $F5'$
+\end_inset
+
+ has an even closer description vector to 
+\begin_inset Formula $F4$
+\end_inset
+
+.
+ In this situation, despite the match 
+\begin_inset Formula $(F4\leftrightarrow F4')$
+\end_inset
+
+ being geometrically consistent with the other matches, it will not be considere
+d as they are not description vector nearest neighbours.
+ Instead 
+\begin_inset Formula $F4$
+\end_inset
+
+ will be matched to 
+\begin_inset Formula $F5'$
+\end_inset
+
+ and later filtered out by a geometric consistency check.
+\begin_inset CommandInset label
+LatexCommand label
+name "fig:nearest-matching"
+
+\end_inset
+
+
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+Finally, the reliance on the second-nearest neighbour for rejecting spurious
+ matches means that the accuracy and speed of matching an object's features
+ is dependent on the remaining features stored in the database.
+ Consider the scenario of two different feature databases, containing different
+ features of different objects.
+ We then insert into each database features from training images of a new
+ object.
+ Given that the same training data for the new object is used for both databases
+, we should expect that both databases would have the same matching performance.
+ However, because the remaining features are different and hence the second-near
+est neighbour for a scene feature is likely to also be different, the matching
+ performance for the two databases will not necessarily be the same.
+ This is not a desirable outcome.
+ 
+\end_layout
+
+\begin_layout Standard
+A further side-effect is the impact on matching speed.
+ The larger the database grows as more objects are learned, the longer feature
+ matching will take.
+ In some cases this is unavoidable, however, in others we may wish to exploit
+ background knowledge of the scene contents to speed up feature matching.
+ Take, for example, a scenario where a scene is known to contain a specific
+ object.
+ When performing scene feature matching, it would improve performance to
+ consider only the database features belonging to the known object, rather
+ than all of the features in the database, including those belonging to
+ other objects.
+ However, when using the second-nearest neighbour threshold criteria for
+ rejecting spurious matches, this is not possible.
+\end_layout
+
+\begin_layout Standard
+To address these limitations, we present a new approach to matching SIFT
+ features.
+ We call this approach Bipartite Feature Matching, as it resembles building
+ a bipartite graph between scene and database object features.
+\end_layout
+
+\begin_layout Section
+Bipartite Feature Matching Algorithm
+\begin_inset CommandInset label
+LatexCommand label
+name "sec:Bipartite-Feature-Matching"
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Subsection
+Overview
+\end_layout
+
+\begin_layout Standard
+The aim of our algorithm is to recognise and localise an object by matching
+ features from a set of training images of the object to corresponding features
+ of that object in an image, while dealing with clutter, occlusion, orientation,
+ and lighting changes.
+ Let us call the set of object features extracted from a single training
+ image a 
+\begin_inset Quotes eld
+\end_inset
+
+snapshot
+\begin_inset Quotes erd
+\end_inset
+
+, the feature database consists of multiple snapshots of various objects.
+ It should be noted that we match snapshots from the database to the scene,
+ in contrast to the approach described previously in which the opposite
+ is done, scene features are matched to the database.
+ 
+\end_layout
+
+\begin_layout Standard
+We consider the problem of matching a snapshot to the scene as forming a
+ bipartite graph between the snapshot's features and the matched scene features
+ (Figure 
+\begin_inset CommandInset ref
+LatexCommand ref
+reference "fig:bipartite-match"
+
+\end_inset
+
+ illustrates this concept).
+ A valid mapping will have each snapshot feature map to a single scene feature
+ or to a null node (signifying no appropriate match for that feature), and
+ each scene feature will have no more than one snapshot feature mapped to
+ it.
+ There are several other criteria for a valid feature mapping; matching
+ features should exhibit three forms of consistency in relation to one another.
+ These are 
+\emph on
+Description Vector Consistency
+\emph default
+, 
+\emph on
+Position Consistency
+\emph default
+, and 
+\emph on
+Orientation Consistency
+\emph default
+.
+ 
+\emph on
+Description Vector Consistency
+\emph default
+ (described in detail in Section 
+\begin_inset CommandInset ref
+LatexCommand ref
+reference "sub:SIFT-Description-Vector"
+
+\end_inset
+
+) constrains matched features to have similar description vectors.
+ 
+\emph on
+Position Consistency
+\emph default
+ (described in detail in Section 
+\begin_inset CommandInset ref
+LatexCommand ref
+reference "sub:Feature-Position-Consistency"
+
+\end_inset
+
+) constrains matched scene features to have the same relative image positions
+ as the corresponding database features.
+ Similarly, 
+\emph on
+Orientation Consistency
+\emph default
+ constrains matched scene features to have the same relative orientations
+ as the corresponding database features.
+ By considering relative feature positions and orientations, the feature
+ matching is invariant to translation and rotation of the object in the
+ image.
+\end_layout
+
+\begin_layout Standard
+\begin_inset Float figure
+wide false
+sideways false
+status open
+
+\begin_layout Plain Layout
+\align center
+\begin_inset Graphics
+	filename images/matches2.png
+	width 70text%
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Plain Layout
+\begin_inset Caption
+
+\begin_layout Plain Layout
+\begin_inset Argument
+status open
+
+\begin_layout Plain Layout
+Bipartite feature mapping.
+\end_layout
+
+\end_inset
+
+The task is to map object snapshot features to scene features, each feature
+ has a pixel position (Pos), a description vector (Dv), and an image gradient
+ orientation (Ori).
+\begin_inset CommandInset label
+LatexCommand label
+name "fig:bipartite-match"
+
+\end_inset
+
+
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+To find a mapping that satisfies the above criteria, we first find a small
+ subset of matches between snapshot and scene features that have a high
+ confidence of being valid (described in detail in Section 
+\begin_inset CommandInset ref
+LatexCommand ref
+reference "sub:Finding-a-Consistent"
+
+\end_inset
+
+).
+ This subset is then used to bootstrap the rest of the feature mapping (describe
+d in detail in Section 
+\begin_inset CommandInset ref
+LatexCommand ref
+reference "sub:Generating-the-Feature"
+
+\end_inset
+
+).
+ Once a consistent mapping is found between snapshot features and scene
+ features the position and orientation of the object in the image can be
+ determined using a least squares model fitting approach.
+ There is no need to remove outliers or inconsistent matches with RANSAC
+ 
+\begin_inset CommandInset citation
+LatexCommand cite
+key "3_Fischler_ransac"
+
+\end_inset
+
+ or the Hough Transform 
+\begin_inset CommandInset citation
+LatexCommand cite
+key "3_Duda_hough"
+
+\end_inset
+
+.
+\end_layout
+
+\begin_layout Standard
+In Section 
+\begin_inset CommandInset ref
+LatexCommand ref
+reference "sec:Experiments-and-Results"
+
+\end_inset
+
+ we present experimental results demonstrating the effectiveness of this
+ approach for feature matching, followed by discussion of these results
+ and areas for future work.
+\end_layout
+
+\begin_layout Subsection
+SIFT Description Vector Consistency
+\begin_inset CommandInset label
+LatexCommand label
+name "sub:SIFT-Description-Vector"
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+Each SIFT feature has an associated 128-dimensional description vector,
+ which is a scale and rotation invariant description of the pixel neighbourhood
+ around the interest point.
+ We use this description vector as the primary method by which SIFT features
+ are matched between images.
+ SIFT description vectors are highly discriminatory, therefore if two features
+ in two different images of a scene have similar description vectors, they
+ have similar local pixel neighbourhoods and are thus likely to correspond
+ to the same point on an object.
+ A mapping between a snapshot's features and scene features should exhibit
+ 
+\emph on
+Description Vector Consistency
+\emph default
+, which is the requirement that matched features have similar description
+ vectors.
+ The similarity between two SIFT features is measured by the Euclidean distance
+ between their description vectors.
+ Given two feature description vectors 
+\begin_inset Formula $A$
+\end_inset
+
+ and 
+\begin_inset Formula $B$
+\end_inset
+
+, the distance is: 
+\end_layout
+
+\begin_layout Standard
+\begin_inset Formula 
+\begin{equation}
+Distance(A,B)=\sqrt{\sum_{i=1}^{128}{\textstyle (A_{i}-B_{i})}^{2}}\label{eq:sift_descr_dist}
+\end{equation}
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+The lower the descriptor distance between two features the more likely they
+ are to match.
+ We further quantify this relationship by examining the description vector
+ distances between matching and non-matching features.
+ The goal is to determine the function 
+\begin_inset Formula $F(D)\rightarrow p_{match}$
+\end_inset
+
+ which, given the distance 
+\begin_inset Formula $D$
+\end_inset
+
+, returns the probability 
+\begin_inset Formula $p_{match}$
+\end_inset
+
+.
+ This is the probability that two features match given the Euclidean distance
+ 
+\begin_inset Formula $D$
+\end_inset
+
+ between their description vectors.
+ We define this function using Bayes Rule: 
+\end_layout
+
+\begin_layout Standard
+\begin_inset Formula 
+\[
+P(match|D\leq x)=\dfrac{P(D\leq x|match)\cdot P(match)}{P(D\leq x)}
+\]
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+In this equation, 
+\begin_inset Formula $P(D\leq x|match)$
+\end_inset
+
+ is the probability of the description vector distance being less than 
+\begin_inset Formula $x$
+\end_inset
+
+ for a matching pair of features, 
+\begin_inset Formula $P(D\leq x)$
+\end_inset
+
+ is the probability that any feature pair has a description vector distance
+ less than 
+\begin_inset Formula $x$
+\end_inset
+
+, and 
+\begin_inset Formula $P(match)$
+\end_inset
+
+ is the 
+\shape italic
+a priori
+\shape default
+ probability that two features match.
+ 
+\end_layout
+
+\begin_layout Standard
+To calculate the first two probabilities we considered a large number of
+ matching and non-matching feature pairs across a number of different objects
+ and recorded the description vector distance for each.
+ For non-matching features we used many images (see Appendix section 
+\begin_inset CommandInset ref
+LatexCommand ref
+reference "sec:Feature-Matching-Learning"
+
+\end_inset
+
+) of distinct objects and considered all pairs of features between the different
+ images.
+ The distribution of description vector distances for non-matching feature
+ pairs is presented in Figure 
+\begin_inset CommandInset ref
+LatexCommand ref
+reference "fig:feature_match_distance_data"
+
+\end_inset
+
+.
+ This distribution equates to the probability 
+\family roman
+\series medium
+\shape up
+\size normal
+\emph off
+\bar no
+\strikeout off
+\uuline off
+\uwave off
+\noun off
+\color none
+
+\begin_inset Formula $P(D\leq x)$
+\end_inset
+
+.
+\end_layout
+
+\begin_layout Standard
+\begin_inset Float figure
+wide false
+sideways false
+status open
+
+\begin_layout Plain Layout
+\align center
+\begin_inset Graphics
+	filename images/feature_match_data.png
+	width 80text%
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Plain Layout
+\begin_inset Caption
+
+\begin_layout Plain Layout
+This graph shows the ratio of randomly chosen feature pairs, as well as
+ matching feature pairs, that have a description vector distance less than
+ a given amount.
+\begin_inset CommandInset label
+LatexCommand label
+name "fig:feature_match_distance_data"
+
+\end_inset
+
+
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Plain Layout
+
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+For matching features we took several objects and placed them in a scene
+ in varying orientations, positions, and lighting conditions.
+ We then manually matched features that were on the same point on the surface
+ of the same object in different images.
+ The distribution of description vector distances for matching feature pairs
+ is shown in Figure 
+\begin_inset CommandInset ref
+LatexCommand ref
+reference "fig:feature_match_distance_data"
+
+\end_inset
+
+.
+ This distribution equates to the probability 
+\family roman
+\series medium
+\shape up
+\size normal
+\emph off
+\bar no
+\strikeout off
+\uuline off
+\uwave off
+\noun off
+\color none
+
+\begin_inset Formula $P(D\leq x|match)$
+\end_inset
+
+.
+\end_layout
+
+\begin_layout Standard
+\begin_inset Float figure
+wide false
+sideways false
+status open
+
+\begin_layout Plain Layout
+\align center
+\begin_inset Graphics
+	filename images/feature_match_probability.png
+	width 80text%
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Plain Layout
+\begin_inset Caption
+
+\begin_layout Plain Layout
+The
+\shape italic
+ a priori
+\shape default
+ probability that two features are a match, given their description vector
+ distances.
+\begin_inset CommandInset label
+LatexCommand label
+name "fig:feature_match_probability"
+
+\end_inset
+
+
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Plain Layout
+
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+We define the 
+\shape italic
+a priori
+\shape default
+ probability that a given Snapshot feature matches a given Scene feature,
+ 
+\begin_inset Formula $P(match)$
+\end_inset
+
+, to be equal to 
+\begin_inset Formula $\frac{1}{N}$
+\end_inset
+
+ where 
+\begin_inset Formula $N$
+\end_inset
+
+ is the number of Scene features.
+ Using these data we can calculate the independent probability of a particular
+ Snapshot feature matching a Scene feature based only on their feature descripti
+on vector distance.
+ An example probability distribution is show in Figure 
+\begin_inset CommandInset ref
+LatexCommand ref
+reference "fig:feature_match_probability"
+
+\end_inset
+
+, assuming the number of Scene features 
+\begin_inset Formula $N$
+\end_inset
+
+ to be equal to 
+\begin_inset Formula $300$
+\end_inset
+
+.
+ 
+\end_layout
+
+\begin_layout Subsection
+Feature Position Consistency
+\begin_inset CommandInset label
+LatexCommand label
+name "sub:Feature-Position-Consistency"
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+
+\emph on
+Position Consistency
+\emph default
+ refers to the fact that, assuming a rigid object, the mapped object snapshot
+ features should have the same positions relative to one another as the
+ corresponding scene features.
+ Initially position consistency is defined for a triplet of matching feature
+ pairs, and can then be extended to the entire mapping by considering all
+ triplets of matching feature pairs.
+ A matching feature pair is a tuple of features, 
+\begin_inset Formula $(SnapshotFeature,SceneFeature)$
+\end_inset
+
+, the first is from the set of snapshot features and the second is the matching
+ feature from the set of scene features.
+ 
+\end_layout
+
+\begin_layout Standard
+Let the triplet of matching feature pairs be 
+\begin_inset Formula $(F1,F1')$
+\end_inset
+
+, 
+\begin_inset Formula $(F2,F2')$
+\end_inset
+
+, and 
+\begin_inset Formula $(F3,F3')$
+\end_inset
+
+; to determine whether they are 
+\emph on
+Position Consistent
+\emph default
+ we need to check whether the relative positions of the snapshot and scene
+ features are similar.
+ This is done by first finding the perimeters of the triangles formed by
+ the three snapshot (
+\begin_inset Formula $F1$
+\end_inset
+
+, 
+\begin_inset Formula $F2$
+\end_inset
+
+, 
+\begin_inset Formula $F3$
+\end_inset
+
+) and scene (
+\begin_inset Formula $F1'$
+\end_inset
+
+, 
+\begin_inset Formula $F2'$
+\end_inset
+
+, 
+\begin_inset Formula $F3'$
+\end_inset
+
+) features' image positions.
+ Let these perimeter lengths be 
+\begin_inset Formula $p$
+\end_inset
+
+ and 
+\begin_inset Formula $p'$
+\end_inset
+
+ respectively.
+ We then calculate the normalized pixel edge lengths of the two triangles
+ by taking the edge distance and scaling by the perimeter of the triangle,
+ eg:
+\end_layout
+
+\begin_layout Standard
+\begin_inset Formula 
+\begin{equation}
+normalisedLength(F1,F2)=\frac{\left|imgPos(F1)-imgPos(F2)\right|}{p}\label{eq:norm_length}
+\end{equation}
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+For a position-consistent match the difference between corresponding normalized
+ edge lengths of the snapshot and scene features will be small.
+ That is, 
+\begin_inset Formula 
+\begin{equation}
+\left|normalisedLength(F1,F2)-normalisedLength(F1',F2')\right|<\epsilon\label{eq:norm_length_epsilon}
+\end{equation}
+
+\end_inset
+
+The purpose of normalizing the edge lengths is to account for varying scales
+ and image resolution.
+ Figure 
+\begin_inset CommandInset ref
+LatexCommand ref
+reference "fig:pos-consistent"
+
+\end_inset
+
+ shows a case of a position consistent and inconsistent match.
+ The features in the 
+\emph on
+Snapshot
+\emph default
+ are position-consistent with the matching features in 
+\emph on
+SceneA
+\emph default
+, but are inconsistent with matching features in 
+\emph on
+SceneB
+\emph default
+.
+ For example in Figure 
+\begin_inset CommandInset ref
+LatexCommand ref
+reference "fig:pos-consistent"
+
+\end_inset
+
+ in the case of 
+\emph on
+SceneA
+\emph default
+, 
+\begin_inset Formula 
+\begin{equation}
+\frac{d1}{d1+d2+d3}\approx\frac{d1'}{d1'+d2'+d3'}\label{eq:pos_consistent}
+\end{equation}
+
+\end_inset
+
+ whereas in the case of 
+\emph on
+SceneB
+\emph default
+, 
+\begin_inset Formula 
+\begin{equation}
+\frac{d1}{d1+d2+d3}\not\approx\frac{d1''}{d1''+d2''+d3''}\label{eq:pos_inconsistent}
+\end{equation}
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+It is important to note that due to perspective effects position consistency
+ as defined above is not guaranteed to hold between two views of an object.
+ This is because as an object is rotated out of the camera plane, the points
+ on its surface will change their relative positions in the camera image.
+ However, as the object is rotated out of the camera plane, the description
+ vectors of each SIFT feature on its surface will change, since the pixel
+ neighbourhoods around each point change.
+ Because of this, after a few degrees of rotation the SIFT feature will
+ change beyond recognition (or disappear), and as such multiple different
+ snapshots of an object are required to recognize the object from different
+ view angles.
+ As a result, in practice position consistency will hold within some small
+ error bound for the snapshots near the current object viewing direction.
+\end_layout
+
+\begin_layout Standard
+\begin_inset Float figure
+wide false
+sideways false
+status open
+
+\begin_layout Plain Layout
+\align center
+\begin_inset Graphics
+	filename images/Position.png
+	width 70text%
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Plain Layout
+\begin_inset Caption
+
+\begin_layout Plain Layout
+\begin_inset Argument
+status open
+
+\begin_layout Plain Layout
+Feature position consistency outline.
+\end_layout
+
+\end_inset
+
+Features in the 
+\emph on
+Snapshot
+\emph default
+ are position-consistent with the matching features in 
+\emph on
+SceneA
+\emph default
+, and not consistent with matching features in 
+\emph on
+SceneB.
+\begin_inset CommandInset label
+LatexCommand label
+name "fig:pos-consistent"
+
+\end_inset
+
+
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Subsection
+Feature Orientation Consistency
+\begin_inset CommandInset label
+LatexCommand label
+name "sub:Feature-Orientation-Consistency"
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+Each SIFT feature has an orientation angle that refers to the direction
+ of the dominant image gradient at the feature point.
+ If an object is rotated the orientation of a feature on that object will
+ also rotate, but will remain constant relative to other features on the
+ same object (since those features are also rotated).
+ A feature mapping has 
+\emph on
+Orientation Consistency
+\emph default
+ if the relative feature orientations between snapshot features are equal
+ to the relative orientations between corresponding scene features.
+ Furthermore, if we take a vector between any two snapshot features, and
+ a vector between the corresponding matched scene features, the angle between
+ the snapshot features' orientations and the vector between them should
+ match the angle between the corresponding scene features' orientations
+ and the vector between them.
+ 
+\end_layout
+
+\begin_layout Standard
+This concept is shown in Figure 
+\begin_inset CommandInset ref
+LatexCommand ref
+reference "fig:ori-consistency"
+
+\end_inset
+
+.
+ In the case of a match between the Snapshot and SceneA there are matching
+ feature pairs 
+\begin_inset Formula $(F1,F1')$
+\end_inset
+
+ and 
+\begin_inset Formula $(F2,F2')$
+\end_inset
+
+; the match between the Snapshot and SceneB has matching feature pairs 
+\begin_inset Formula $(F1,F1'')$
+\end_inset
+
+ and 
+\begin_inset Formula $(F2,F2'')$
+\end_inset
+
+.
+ Each feature has an associated orientation vector, for example 
+\begin_inset Formula $ori1$
+\end_inset
+
+ for the feature 
+\begin_inset Formula $F1$
+\end_inset
+
+.
+ The relative orientations of the features determine that the former has
+ orientation consistency whereas the latter does not:
+\begin_inset Formula 
+\begin{eqnarray}
+ & ori1\cdot ori2\approx ori1'\cdot ori2'\nonumber \\
+ & ori1\cdot ori2\not\approx ori1''\cdot ori2''\label{eq:ori_consistency}
+\end{eqnarray}
+
+\end_inset
+
+A further reason for a lack of 
+\emph on
+Orientation Consistency
+\emph default
+ for the match between the Snapshot and SceneB is that the orientation of
+ the features in SceneB relative to the vector between the features is different
+ to that of the Snapshot and SceneA.
+ Let us define the following: 
+\begin_inset Formula 
+\begin{eqnarray}
+ & vec=\left\Vert imgPos(F1)-imgPos(F2)\right\Vert \nonumber \\
+ & vec'=\left\Vert imgPos(F1')-imgPos(F2')\right\Vert \nonumber \\
+ & vec''=\left\Vert imgPos(F1'')-imgPos(F2'')\right\Vert \label{eq:pos_consistency}
+\end{eqnarray}
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+From this it can be seen that in Figure 
+\begin_inset CommandInset ref
+LatexCommand ref
+reference "fig:ori-consistency"
+
+\end_inset
+
+ the following holds:
+\end_layout
+
+\begin_layout Standard
+\begin_inset Formula 
+\begin{eqnarray}
+ & ori1\cdot vec\approx ori1'\cdot vec'\nonumber \\
+ & ori1\cdot vec\not\approx ori1''\cdot vec''\label{eq:ori_consistency_in}
+\end{eqnarray}
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+\begin_inset Float figure
+wide false
+sideways false
+status open
+
+\begin_layout Plain Layout
+\align center
+\begin_inset Graphics
+	filename images/Orientation.png
+	width 70text%
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Plain Layout
+\begin_inset Caption
+
+\begin_layout Plain Layout
+\begin_inset Argument
+status open
+
+\begin_layout Plain Layout
+Feature orientation consistency outline.
+\end_layout
+
+\end_inset
+
+The matching features between the Snapshot and SceneA, 
+\begin_inset Formula $(F1,F1'),(F2,F2')$
+\end_inset
+
+, exhibit orientation consistency as their feature orientations are similar
+ relative to each other and are also similar relative to the line between
+ them.
+ The features in SceneB, 
+\begin_inset Formula $(F1,F1''),(F2,F2'')$
+\end_inset
+
+, do not exhibit orientation consistency relative to the Snapshot.
+\begin_inset CommandInset label
+LatexCommand label
+name "fig:ori-consistency"
+
+\end_inset
+
+
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Subsection
+Finding a Consistent Feature Mapping
+\begin_inset CommandInset label
+LatexCommand label
+name "sub:Finding-a-Consistent"
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+We define a consistent feature mapping as one that exhibits 
+\emph on
+Description Vector
+\emph default
+, 
+\emph on
+Position
+\emph default
+, and 
+\emph on
+Orientation Consistency
+\emph default
+.
+ This section describes a method for efficiently finding a consistent mapping
+ between snapshot and scene features.
+ 
+\end_layout
+
+\begin_layout Standard
+A brute force method for finding a consistent mapping is extremely inefficient
+ as for each snapshot there is on the order of 
+\begin_inset Formula $\dfrac{m!}{\left(m-n\right)!}$
+\end_inset
+
+ possible mappings to consider for 
+\begin_inset Formula $n$
+\end_inset
+
+ snapshot features and 
+\begin_inset Formula $m$
+\end_inset
+
+ scene features.
+ Clearly it is not feasible to simply generate every single possible mapping
+ and iterate through to find the most consistent one.
+ 
+\end_layout
+
+\begin_layout Standard
+A more efficient approach is to find a small set of feature matches that
+ exhibit a high degree of consistency and use these as a basis to construct
+ the remainder of the mapping.
+ This is possible because once a small set of feature matches is fixed,
+ the requirement of 
+\emph on
+Position Consistency
+\emph default
+ restricts the remaining feature matches.
+ For example, if there are three snapshot object features and matching scene
+ features have been found for two of them, only features in a small region
+ of the scene image need to be considered to match the last snapshot feature.
+\end_layout
+
+\begin_layout Standard
+Figure 
+\begin_inset CommandInset ref
+LatexCommand ref
+reference "fig:pos-consistency-search"
+
+\end_inset
+
+ illustrates this concept.
+ If two matched feature pairs 
+\begin_inset Formula $(F1,F1')$
+\end_inset
+
+ and 
+\begin_inset Formula $(F2,F2')$
+\end_inset
+
+ are fixed as a basis, this narrows down the search for a mapping for 
+\begin_inset Formula $F3$
+\end_inset
+
+ to features in a small scene image region (
+\emph on
+Search Area
+\emph default
+), in this example containing 
+\begin_inset Formula $F3'$
+\end_inset
+
+.
+ Features outside of this small scene image region, in this case 
+\begin_inset Formula $F4'$
+\end_inset
+
+, can be ignored.
+ This is because any potential match pair with 
+\begin_inset Formula $F3$
+\end_inset
+
+, such as 
+\begin_inset Formula $(F3,F4')$
+\end_inset
+
+, would not exhibit 
+\emph on
+Position Consistency
+\emph default
+ relative to the other matched features.
+\end_layout
+
+\begin_layout Standard
+\begin_inset Float figure
+placement H
+wide false
+sideways false
+status open
+
+\begin_layout Plain Layout
+\align center
+\begin_inset Graphics
+	filename images/Search.png
+	width 60text%
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Plain Layout
+\begin_inset Caption
+
+\begin_layout Plain Layout
+\begin_inset Argument
+status open
+
+\begin_layout Plain Layout
+Feature match search using position consistency.
+\end_layout
+
+\end_inset
+
+If 
+\begin_inset Formula $(F1,F1')$
+\end_inset
+
+ and 
+\begin_inset Formula $(F2,F2')$
+\end_inset
+
+ match we can narrow down the search for the matching feature for 
+\begin_inset Formula $F3$
+\end_inset
+
+ to a small 
+\emph on
+Search Area
+\emph default
+, ignoring features such as 
+\emph on
+F4' 
+\emph default
+outside this area, as the resulting match would not be 
+\emph on
+Position Consistent
+\emph default
+.
+\begin_inset CommandInset label
+LatexCommand label
+name "fig:pos-consistency-search"
+
+\end_inset
+
+
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+The initial step to generating a consistent feature mapping is to find a
+ small set of matching feature pairs that are highly consistent in all three
+ respects (description vector, position, orientation), indicating a high
+ likelihood they form part of a valid mapping.
+ We call this the basis set of feature matches.
+ To build the basis set, a list of all possible matching feature pairs is
+ generated and sorted according to their SIFT description vector similarity:
+ 
+\size small
+
+\begin_inset Formula 
+\begin{eqnarray}
+ & S=[(SnapshotFeature,SceneFeature,SIFT\_similarity_{i})]_{i=0}^{nm}\nonumber \\
+ & SIFT\_similarity_{i}>SIFT\_similarity_{i+1}\label{eq:sift_similarity_ordered}
+\end{eqnarray}
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+The list 
+\begin_inset Formula $S$
+\end_inset
+
+ has 
+\begin_inset Formula $n\times m$
+\end_inset
+
+ elements (for 
+\begin_inset Formula $n$
+\end_inset
+
+ snapshot features and 
+\begin_inset Formula $m$
+\end_inset
+
+ scene features), the 
+\emph on
+
+\begin_inset Formula $SIFT\_similarity$
+\end_inset
+
+
+\emph default
+ is the probability the features are a valid match (in the range 
+\begin_inset Formula $[0.0,1.0]$
+\end_inset
+
+) based on their SIFT description vector similarity presented in Section
+ 
+\begin_inset CommandInset ref
+LatexCommand ref
+reference "sub:SIFT-Description-Vector"
+
+\end_inset
+
+.
+ The potential feature matches at the front of the list 
+\begin_inset Formula $S$
+\end_inset
+
+ have a higher 
+\emph on
+
+\begin_inset Formula $SIFT\_similarity$
+\end_inset
+
+
+\emph default
+ and thus a higher probability of being valid matches.
+\end_layout
+
+\begin_layout Standard
+The next step is to select sets of matching feature pairs from the front
+ of this sequence and calculate the overall 
+\emph on
+Consistency Score 
+\emph default
+for each set.
+ We need a minimum of three matching feature pairs for a basis set since
+ this is the minimum number required to determine 
+\emph on
+Position Consistency
+\emph default
+.
+ The overall consistency score for a set of matching feature pairs is defined
+ as the product of the description vector, position, and orientation consistency
+ scores; each is in the range 
+\begin_inset Formula $[0.0,1.0]$
+\end_inset
+
+ and is described in the following section.
+ 
+\end_layout
+
+\begin_layout Subsection
+Calculating Consistency Scores
+\begin_inset CommandInset label
+LatexCommand label
+name "sub:Calculating-Consistency-Scores"
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+We determine if a set of three feature matches is a potential basis set
+ by calculating its overall 
+\emph on
+Consistency Score
+\emph default
+ and comparing this to a threshold value.
+ The 
+\emph on
+Consistency Score
+\emph default
+ is calculated by multiplying the description vector consistency, position
+ consistency, and orientation consistency scores of the set of matches.
+ These are described below.
+\end_layout
+
+\begin_layout Standard
+The description vector consistency score for the three matching feature
+ pairs is their average 
+\emph on
+
+\begin_inset Formula $SIFT\_similarity$
+\end_inset
+
+
+\emph default
+.
+ The 
+\emph on
+
+\begin_inset Formula $SIFT\_similarity$
+\end_inset
+
+
+\emph default
+ of each feature pair is in the range 
+\begin_inset Formula $[0.0,1.0]$
+\end_inset
+
+ and is the probability that the features match based purely on their descriptio
+n vector distance (see Section 
+\begin_inset CommandInset ref
+LatexCommand ref
+reference "sub:SIFT-Description-Vector"
+
+\end_inset
+
+).
+\end_layout
+
+\begin_layout Standard
+The position consistency score is based on the sum of the differences between
+ the corresponding normalized edge lengths of the triangles formed by the
+ three snapshot features and three scene features.
+ Taking Figure 
+\begin_inset CommandInset ref
+LatexCommand ref
+reference "fig:pos-consistent"
+
+\end_inset
+
+ as an example, with the three feature match pairs being 
+\begin_inset Formula $\left(F1,F1'\right)$
+\end_inset
+
+, 
+\begin_inset Formula $\left(F2,F2'\right)$
+\end_inset
+
+, and 
+\begin_inset Formula $\left(F3,F3'\right)$
+\end_inset
+
+.
+ The normalized edge difference between the 
+\emph on
+Snapshot
+\emph default
+ and 
+\emph on
+SceneA
+\emph default
+ is equal to: 
+\begin_inset Formula 
+\begin{equation}
+\left|\frac{d1}{p}-\frac{d1'}{p'}\right|+\left|\frac{d2}{p}-\frac{d2'}{p'}\right|+\left|\frac{d3}{p}-\frac{d3'}{p'}\right|\label{eq:pos_consistency_formula}
+\end{equation}
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+where 
+\begin_inset Formula $p=d1+d2+d3$
+\end_inset
+
+ and 
+\begin_inset Formula $p'=d1'+d2'+d3'$
+\end_inset
+
+.
+ This sum is normalized to the range 
+\begin_inset Formula $\left[0.0,1.0\right]$
+\end_inset
+
+ using a Gaussian Radial Basis function, with a mean of 
+\begin_inset Formula $0.0$
+\end_inset
+
+ and standard deviation of 
+\begin_inset Formula $0.2$
+\end_inset
+
+, to give the final position consistency score.
+ These parameters were determined empirically to give good results.
+\end_layout
+
+\begin_layout Standard
+To determine the orientation consistency score of a set of three feature
+ match pairs first consider the orientation score of two feature match pairs.
+ Denote the two feature match pairs as 
+\begin_inset Formula $(A,A')$
+\end_inset
+
+ and 
+\begin_inset Formula $(B,B')$
+\end_inset
+
+, where 
+\emph on
+
+\begin_inset Formula $A$
+\end_inset
+
+ 
+\emph default
+and 
+\emph on
+
+\begin_inset Formula $B$
+\end_inset
+
+ 
+\emph default
+are snapshot features while 
+\emph on
+
+\begin_inset Formula $A$
+\end_inset
+
+' 
+\emph default
+and 
+\emph on
+
+\begin_inset Formula $B'$
+\end_inset
+
+
+\emph default
+ are scene features.
+ For the snapshot features calculate three values: 
+\end_layout
+
+\begin_layout Itemize
+angle difference (in radians) between the orientations of the features,
+ 
+\end_layout
+
+\begin_layout Itemize
+angle difference (in radians) between the orientation of 
+\emph on
+A
+\emph default
+ and the vector from 
+\emph on
+A 
+\emph default
+to 
+\emph on
+B
+\emph default
+, 
+\end_layout
+
+\begin_layout Itemize
+angle difference (in radians) between the orientation of 
+\emph on
+B 
+\emph default
+and the vector from 
+\emph on
+B 
+\emph default
+to 
+\emph on
+A
+\emph default
+.
+ 
+\end_layout
+
+\begin_layout Standard
+Similarly these values are calculated for the two corresponding scene features,
+ 
+\begin_inset Formula $A'$
+\end_inset
+
+ and 
+\begin_inset Formula $B'$
+\end_inset
+
+.
+ The sum of the absolute difference between the corresponding values of
+ the snapshot and scene features is the raw orientation consistency score
+ of the two feature match pairs.
+ The raw orientation consistency score of a triplet of matching pairs is
+ defined as the average orientation consistency score across the three possible
+ pairs of matching feature pairs.
+ To calculate the final orientation score, this value is normalized to the
+ range 
+\begin_inset Formula $[0.0,1.0]$
+\end_inset
+
+ using a Gaussian Radial Basis function with a mean of 
+\begin_inset Formula $0.0$
+\end_inset
+
+ and standard deviation 
+\begin_inset Formula $0.3$
+\end_inset
+
+ radians, these parameters were determined empirically to give good results.
+\end_layout
+
+\begin_layout Standard
+Having calculated these three separate consistency scores (description vector,
+ position, and orientation), we can then calculate the overall 
+\emph on
+Consistency Score
+\emph default
+ of a particular basis set by multiplying the component scores.
+ As each is in the range of 
+\begin_inset Formula $[0.0,1.0]$
+\end_inset
+
+, the resulting overall 
+\emph on
+Consistency Score
+\emph default
+ will also be in the range 
+\begin_inset Formula $[0.0,1.0]$
+\end_inset
+
+.
+\end_layout
+
+\begin_layout Subsection
+Generating the Feature Mapping
+\begin_inset CommandInset label
+LatexCommand label
+name "sub:Generating-the-Feature"
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+Given a basis set of feature match pairs, we can use this to match the remaining
+ snapshot features to scene features.
+ A basis set of feature match pairs contains three pairs of potentially
+ (with high confidence) matching snapshot and scene features.
+ This set of feature matches defines a rigid transform (described in detail
+ below) between snapshot and scene features.
+ We can calculate this transform, apply it to all other snapshot features,
+ and match the transformed features to nearby scene features that have similar
+ description vectors and orientations.
+ In this way a basis set generates a feature mapping between snapshot and
+ scene features.
+ Figure 
+\begin_inset CommandInset ref
+LatexCommand ref
+reference "fig:feature-mapping"
+
+\end_inset
+
+ illustrates this concept.
+\end_layout
+
+\begin_layout Standard
+However, there are many possible basis sets, each of which potentially resulting
+ in a different feature mapping.
+ To determine the single definitive mapping from snapshot to scene features,
+ we consider basis sets of feature matches from the front of the ordered
+ (by description vector similarity) list 
+\begin_inset Formula $S$
+\end_inset
+
+ (defined in Section 
+\begin_inset CommandInset ref
+LatexCommand ref
+reference "sub:Finding-a-Consistent"
+
+\end_inset
+
+), and only those with an overall 
+\emph on
+Consistency Score
+\emph default
+ greater than 
+\begin_inset Formula $0.8$
+\end_inset
+
+.
+ This threshold was determined by trying out different values on a small
+ number of test scenes and objects, and choosing the threshold value that
+ performed best.
+ A more thorough investigation of the optimal parameters for our feature
+ matching algorithm we leave as future work.
+ For each such basis set we generate the complete feature mapping (described
+ in detail below).
+ We take the definitive feature mapping to be the one with the largest number
+ of feature matches.
+ If the definitive feature mapping has less than a threshold number of feature
+ matches (we use four as a minimum), then no valid matches are said to exist.
+ This would occur, for example, if the target object is not present in the
+ scene image.
+\end_layout
+
+\begin_layout Standard
+\begin_inset Float figure
+wide false
+sideways false
+status open
+
+\begin_layout Plain Layout
+\align center
+\begin_inset Graphics
+	filename images/mapping.png
+	width 80text%
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Plain Layout
+\begin_inset Caption
+
+\begin_layout Plain Layout
+\begin_inset Argument
+status open
+
+\begin_layout Plain Layout
+Generating feature mapping using basis match pairs.
+\end_layout
+
+\end_inset
+
+This diagram shows how a rigid transform can be extracted from the basis
+ set of feature matches 
+\begin_inset Formula $\left[(F1,F1'),(F2,F2'),(F3,F3')\right]$
+\end_inset
+
+ and then used to find the remaining feature matches.
+ The entire snapshot is transformed by a transform derived from the basis
+ feature matches.
+ This then allows the remaining snapshot features to be matches to scene
+ features that are nearby in the image and have similar descriptions and
+ orientations.
+\begin_inset CommandInset label
+LatexCommand label
+name "fig:feature-mapping"
+
+\end_inset
+
+
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Plain Layout
+
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Paragraph*
+Basis Set Transform
+\end_layout
+
+\begin_layout Standard
+A basis set of feature matches implicitly defines a rigid transform between
+ snapshot and scene features.
+ This transform is in the form of a translation, rotation, and scaling.
+ We define the scaling component of this transform as the ratio between
+ the perimeter of the triangle formed by the three snapshot features and
+ the perimeter of the triangle formed by the three scene features.
+ The translation component is calculated by taking the difference between
+ the average of the 
+\begin_inset Formula $(x,y)$
+\end_inset
+
+ image positions of the snapshot and scene basis set features (centre of
+ the triangle).
+ The rotation component is calculated by comparing the orientations of correspon
+ding snapshot and scene features of the basis set.
+ The average difference in orientation is the rotation amount.
+ We then apply this transform to all of the features of the snapshot, scaling,
+ rotating, and then translating the image positions of each so that they
+ overlay the scene features.
+ The rotation component is also applied to the SIFT orientation of each
+ snapshot feature.
+\end_layout
+
+\begin_layout Paragraph*
+Matching Features
+\end_layout
+
+\begin_layout Standard
+After all the snapshot features have been transformed, each unmatched snapshot
+ feature (not part of the basis set) is compared against nearby scene features.
+ We match a snapshot feature to the most 
+\emph on
+similar 
+\emph default
+scene feature within a small radius.
+ The similarity in this case is a function of description vector and feature
+ orientation similarity.
+ The description vector similarity is a value in the range 
+\begin_inset Formula $[0.0,1.0]$
+\end_inset
+
+ and was presented in Section 
+\begin_inset CommandInset ref
+LatexCommand ref
+reference "sub:SIFT-Description-Vector"
+
+\end_inset
+
+.
+ The orientation similarity is the difference in orientation angles of each
+ feature in radians, normalised to the range 
+\begin_inset Formula $[0.0,1.0]$
+\end_inset
+
+ using a Gaussian Radial Basis function with mean 
+\begin_inset Formula $0.0$
+\end_inset
+
+ and standard deviation 
+\begin_inset Formula $0.3$
+\end_inset
+
+ radians.
+ The overall similarity is the product of the two values, and is therefore
+ also in the range 
+\begin_inset Formula $[0.0,1.0]$
+\end_inset
+
+.
+ We match a snapshot feature only to scene feature that have a similarity
+ score over a threshold (we empirically chose a threshold of 
+\begin_inset Formula $0.7$
+\end_inset
+
+ as it provided good results).
+ This matching process is detailed in Algorithm 
+\begin_inset CommandInset ref
+LatexCommand ref
+reference "alg:Generating-full-feature"
+
+\end_inset
+
+.
+\end_layout
+
+\begin_layout Standard
+\begin_inset Float algorithm
+wide false
+sideways false
+status open
+
+\begin_layout Plain Layout
+
+\series bold
+input:
+\series default
+ set of snapshot features 
+\begin_inset Formula $\rightarrow S$
+\end_inset
+
+
+\end_layout
+
+\begin_layout Plain Layout
+
+\series bold
+input:
+\series default
+ set of scene features 
+\begin_inset Formula $\rightarrow C$
+\end_inset
+
+
+\end_layout
+
+\begin_layout Plain Layout
+
+\series bold
+input:
+\series default
+ transform from snapshot to scene basis features
+\begin_inset Formula $\rightarrow t$
+\end_inset
+
+
+\end_layout
+
+\begin_layout Plain Layout
+\begin_inset VSpace defskip
+\end_inset
+
+
+\end_layout
+
+\begin_layout Plain Layout
+\begin_inset Formula $matches\leftarrow\{\}$
+\end_inset
+
+
+\end_layout
+
+\begin_layout Plain Layout
+
+\series bold
+forall
+\series default
+ 
+\begin_inset Formula $s$
+\end_inset
+
+ 
+\series bold
+in
+\series default
+ 
+\begin_inset Formula $S$
+\end_inset
+
+
+\end_layout
+
+\begin_layout Plain Layout
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset Formula $s\leftarrow applyTransform(t,s)$
+\end_inset
+
+
+\end_layout
+
+\begin_layout Plain Layout
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset Formula $near\_features\leftarrow getNearSceneFeatures(C,s)$
+\end_inset
+
+
+\end_layout
+
+\begin_layout Plain Layout
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset Formula $best\_similarity\leftarrow\inf$
+\end_inset
+
+
+\end_layout
+
+\begin_layout Plain Layout
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset Formula $best\_match\leftarrow null$
+\end_inset
+
+
+\end_layout
+
+\begin_layout Plain Layout
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset space ~
+\end_inset
+
+
+\series bold
+forall
+\series default
+ 
+\begin_inset Formula $n$
+\end_inset
+
+ 
+\series bold
+in
+\series default
+ 
+\begin_inset Formula $near\_features$
+\end_inset
+
+
+\end_layout
+
+\begin_layout Plain Layout
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset Formula $similarity\leftarrow calculateSimilarity(s,n)$
+\end_inset
+
+
+\end_layout
+
+\begin_layout Plain Layout
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset space ~
+\end_inset
+
+
+\series bold
+if
+\series default
+ 
+\begin_inset Formula $similariy>similarity\_threshold\wedge similarity>best\_similarity$
+\end_inset
+
+ 
+\series bold
+then
+\end_layout
+
+\begin_layout Plain Layout
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset Formula $best\_similarity\leftarrow similarity$
+\end_inset
+
+
+\end_layout
+
+\begin_layout Plain Layout
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset Formula $best\_match\leftarrow n$
+\end_inset
+
+
+\end_layout
+
+\begin_layout Plain Layout
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset space ~
+\end_inset
+
+
+\series bold
+endif
+\end_layout
+
+\begin_layout Plain Layout
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset space ~
+\end_inset
+
+
+\series bold
+endfor
+\end_layout
+
+\begin_layout Plain Layout
+\begin_inset VSpace defskip
+\end_inset
+
+
+\end_layout
+
+\begin_layout Plain Layout
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset space ~
+\end_inset
+
+
+\series bold
+if
+\series default
+ 
+\begin_inset Formula $best\_match\neq null$
+\end_inset
+
+ 
+\series bold
+then
+\end_layout
+
+\begin_layout Plain Layout
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset Formula $matches\leftarrow matches\cup\left\{ (s,best\_match)\right\} $
+\end_inset
+
+
+\end_layout
+
+\begin_layout Plain Layout
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset space ~
+\end_inset
+
+
+\begin_inset space ~
+\end_inset
+
+
+\series bold
+endfor
+\end_layout
+
+\begin_layout Plain Layout
+
+\series bold
+endfor
+\end_layout
+
+\begin_layout Plain Layout
+\begin_inset VSpace defskip
+\end_inset
+
+
+\end_layout
+
+\begin_layout Plain Layout
+
+\series bold
+output:
+\series default
+ all match pairs 
+\begin_inset Formula $\leftarrow matches$
+\end_inset
+
+
+\end_layout
+
+\begin_layout Plain Layout
+\begin_inset Caption
+
+\begin_layout Plain Layout
+Generating full feature match from a basis set.
+\begin_inset CommandInset label
+LatexCommand label
+name "alg:Generating-full-feature"
+
+\end_inset
+
+
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Section
+Feature Database Matching Efficiency
+\begin_inset CommandInset label
+LatexCommand label
+name "sec:Feature-Database-Matching"
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+So far we have discussed matching a single database snapshot of features
+ to a set of scene features.
+ The run-time complexity of matching a single snapshot to a scene is at
+ least 
+\emph on
+
+\begin_inset Formula $O(nm)$
+\end_inset
+
+
+\emph default
+ for 
+\emph on
+
+\begin_inset Formula $n$
+\end_inset
+
+ 
+\emph default
+snapshot features and 
+\emph on
+
+\begin_inset Formula $m$
+\end_inset
+
+ 
+\emph default
+scene features.
+ This stems from the need to generate the list of size 
+\begin_inset Formula $n\times m$
+\end_inset
+
+ of all possible feature match pairs, and for each match pair we must compute
+ the SIFT description vector distance.
+ For a database with 
+\begin_inset Formula $s$
+\end_inset
+
+ snapshots, matching a scene with no 
+\emph on
+a priori 
+\emph default
+knowledge of its composition, has a computational complexity of 
+\emph on
+
+\begin_inset Formula $O(nms)$
+\end_inset
+
+.
+ 
+\emph default
+This compares poorly with the matching performance of the standard nearest-neigh
+bour algorithm.
+ For our algorithm, if a k-d tree space partitioning structure is used
+\begin_inset Note Note
+status open
+
+\begin_layout Plain Layout
+cite best bin first
+\end_layout
+
+\end_inset
+
+, a complexity of 
+\begin_inset Formula $O(n\log ms)$
+\end_inset
+
+ is possible.
+ However, our algorithm matches a single snapshot independently of all others,
+ without impacting matching accuracy.
+ The nearest-neighbour matching algorithm, on the other hand, relies on
+ the second-nearest neighbour distance to perform rejection of spurious
+ SIFT matches.
+ In this case, the accuracy of feature matching is dependent on the contents
+ of the entire database.
+\end_layout
+
+\begin_layout Standard
+Take a scenario in which the content of the scene is known, or at least
+ it is known that only a small subset of all learned objects may be in the
+ scene.
+ An example of such a scenario is processing a video stream.
+ Due to temporal coherence we may be able to assume that the current frame
+ can only contain the objects present in the previous frame, only checking
+ for the appearance of new objects intermittently.
+ In such a scenario, using our approach, we could match only the snapshots
+ of objects known to be present in the frame, ignoring all others.
+ This is not possible to do using a nearest-neighbour matching algorithm
+ without affecting matching accuracy.
+ In the experimental results section (Section 
+\begin_inset CommandInset ref
+LatexCommand ref
+reference "sec:Experiments-and-Results"
+
+\end_inset
+
+) we demonstrate the speed-up possible if the contents of the scene can
+ be narrowed down.
+\end_layout
+
+\begin_layout Section
+Experiments and Results
+\begin_inset CommandInset label
+LatexCommand label
+name "sec:Experiments-and-Results"
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+\begin_inset Float figure
+wide false
+sideways false
+status open
+
+\begin_layout Plain Layout
+\align center
+\begin_inset Graphics
+	filename images/Diagram1.png
+	width 100text%
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Plain Layout
+\begin_inset Caption
+
+\begin_layout Plain Layout
+\begin_inset Argument
+status open
+
+\begin_layout Plain Layout
+Feature matching testing scheme.
+\end_layout
+
+\end_inset
+
+Schematic representation of the method of testing different feature matching
+ approaches.
+ We add to a feature database training snapshots of the object.
+ Then we use this database to perform object recognition on a test image
+ of the object in a scene, recording the number of correctly and incorrectly
+ identified object features.
+\begin_inset CommandInset label
+LatexCommand label
+name "fig:test-schematic"
+
+\end_inset
+
+
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Plain Layout
+
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+We test the effectiveness of our feature matching method by comparing it
+ to the nearest neighbour approach.
+ First we test the feature matching accuracy in the context of object recognitio
+n.
+ We build a database of object features using a training set of images,
+ followed by using the generated database to match object features in scene
+ images.
+ This process is summarised in Figure 
+\begin_inset CommandInset ref
+LatexCommand ref
+reference "fig:test-schematic"
+
+\end_inset
+
+.
+ 
+\end_layout
+
+\begin_layout Standard
+The reference nearest neighbour feature matching implementation is Hess's
+\begin_inset Foot
+status open
+
+\begin_layout Plain Layout
+http://web.engr.oregonstate.edu/~hess/
+\end_layout
+
+\end_inset
+
+ Best-Bin First kd-tree implementation for matching SIFT features, with
+ the 
+\family roman
+\series medium
+\shape up
+\size normal
+\emph off
+\bar no
+\strikeout off
+\uuline off
+\uwave off
+\noun off
+\color none
+KD-TREE-BBF-MAX-NN-CHKS
+\family default
+\series default
+\shape default
+\size default
+\emph default
+\bar default
+\strikeout default
+\uuline default
+\uwave default
+\noun default
+\color inherit
+ parameter set to 5000.
+ When testing the performance of the nearest-neighbour matching method,
+ we also add to the database 2000 features extracted from random images
+ with no parts in common with the test object images.
+ This is required because the nearest-neighbour algorithm relies on the
+ second-nearest neighbour feature to provide the rejection threshold for
+ spurious matches (discussed in Section 
+\begin_inset CommandInset ref
+LatexCommand ref
+reference "sec:SIFT-Feature-Matching"
+
+\end_inset
+
+).
+\end_layout
+
+\begin_layout Standard
+The test data set consists of images of 17 different objects in a cluttered
+ scene under three different lighting conditions with four images per lighting
+ condition, for a total of 204 images.
+ For each image, a mask is available that specifies which areas of the image
+ are object and which are background.
+ This, in turn, indicates which features in the image are object features
+ and which are background.
+ The objects used were flat faced rectangular prisms with an image on the
+ faces.
+ The camera used was a Bumblebee2 stereo camera (only the left camera image
+ is used) outputting a colour image with resolution 512x384.
+\end_layout
+
+\begin_layout Standard
+\begin_inset Float figure
+wide false
+sideways false
+status open
+
+\begin_layout Plain Layout
+\align center
+\begin_inset Graphics
+	filename images/true_positives.png
+	width 80text%
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Plain Layout
+\align center
+\begin_inset Caption
+
+\begin_layout Plain Layout
+\begin_inset Argument
+status open
+
+\begin_layout Plain Layout
+Feature matching true positive results.
+\end_layout
+
+\end_inset
+
+Percentage of object features correctly detected by the nearest neighbour
+ and Bipartite Matching approaches.
+ The performance of each approach is graphed against the number of object
+ training images used to generate the database of object features.
+ The error bars indicate the Standard Error of the result data.
+\begin_inset CommandInset label
+LatexCommand label
+name "fig:true-positives"
+
+\end_inset
+
+
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+For each object, 12 images are available, we separate these images into
+ a training set and a test set.
+ In total there are 4094 ways in which 12 images can be split in this way.
+ For each pair of training and testing sets the object features are extracted
+ from the training set of images and inserted into an object feature database.
+ The database is then used to match the test image features to object features,
+ using the nearest neighbour method and the Bipartite Matching method.
+ It should be noted that no further geometric consistency check is performed
+ for either method after the features are matched, as it is not our intention
+ to test the effectiveness of an algorithm such as RANSAC
+\begin_inset Note Note
+status open
+
+\begin_layout Plain Layout
+cite
+\end_layout
+
+\end_inset
+
+ or the Hough Transform
+\begin_inset Note Note
+status open
+
+\begin_layout Plain Layout
+cite
+\end_layout
+
+\end_inset
+
+.
+ 
+\end_layout
+
+\begin_layout Standard
+The percentage of correct and incorrect matches is tabulated according to
+ the number of images in the training set, and averaged over all objects.
+ The true positive match results are shown in Figure 
+\begin_inset CommandInset ref
+LatexCommand ref
+reference "fig:true-positives"
+
+\end_inset
+
+, while the false positive match results (background features incorrectly
+ matched to object features) are shown in Figure 
+\begin_inset CommandInset ref
+LatexCommand ref
+reference "fig:false-positives"
+
+\end_inset
+
+.
+ These results show that our matching scheme has a higher feature matching
+ rate across all training set sizes, while at the same time having a lower
+ false positive matching rate.
+\end_layout
+
+\begin_layout Standard
+\begin_inset Float figure
+wide false
+sideways false
+status open
+
+\begin_layout Plain Layout
+\align center
+\begin_inset Graphics
+	filename images/false_positive.png
+	width 80text%
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Plain Layout
+\begin_inset Caption
+
+\begin_layout Plain Layout
+\begin_inset Argument
+status open
+
+\begin_layout Plain Layout
+Feature matching false positive results.
+\end_layout
+
+\end_inset
+
+Number of background features incorrectly classified as object features
+ by the nearest neighbour and Bipartite Matching approaches, expressed as
+ a percentage of object features.
+ The performance of each approach is graphed against the number of object
+ training images used to generate the database of object features.
+ The error bars indicate the Standard Error of the result data.
+\begin_inset CommandInset label
+LatexCommand label
+name "fig:false-positives"
+
+\end_inset
+
+
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+In addition to testing the matching performance, we also compared the matching
+ speed of our algorithm against the Best-Bin-First nearest neighbour method.
+ We recorded the time in milliseconds to perform a feature match for a given
+ feature database size (database size is defined as the total number of
+ features stored).
+ The match time is calculated by taking the time to match an image, divided
+ by the number of features in the image.
+ The feature database is composed of features from many different objects.
+ We tested two different scenarios, in the first the scene content is unknown
+ and it may contain any of the learned objects, in the second the scene
+ content is known to contain only one of the learned objects.
+ In the latter scenario, using the Bipartite Matching approach we can realise
+ a significant speed-up by not matching any of the snapshots of objects
+ known to not be in the scene.
+ The results are presented in Figure 
+\begin_inset CommandInset ref
+LatexCommand ref
+reference "fig:matching-speed"
+
+\end_inset
+
+.
+ It can be seen that the time complexity of our algorithm is linear with
+ the size of the database when no information regarding the scene is available.
+ However, if we specify the object in the scene with a hint, our Bipartite
+ Matching method is much more efficient compared to the nearest neighbour
+ approach.
+\end_layout
+
+\begin_layout Standard
+\begin_inset Float figure
+wide false
+sideways false
+status open
+
+\begin_layout Plain Layout
+\align center
+\begin_inset Graphics
+	filename images/perf.png
+	width 80text%
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Plain Layout
+\begin_inset Caption
+
+\begin_layout Plain Layout
+\begin_inset Argument
+status open
+
+\begin_layout Plain Layout
+Feature matching speedup results.
+\end_layout
+
+\end_inset
+
+Comparison of matching speeds between a database using the Nearest neighbour
+ scheme (Best-Bin-First) and one using the Bipartite Matching scheme.
+ The Bipartite Matching scheme is considerably slower when no information
+ about the scene being matched is known.
+ However, if a hint is given regarding the contents of the scene, the Bipartite
+ Matching scheme is extremely efficient, much faster than the Nearest neighbour
+ method.
+\begin_inset CommandInset label
+LatexCommand label
+name "fig:matching-speed"
+
+\end_inset
+
+
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Section
+Discussion
+\begin_inset CommandInset label
+LatexCommand label
+name "sec:Discussion"
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+Our method for feature matching has several demonstrated advantages over
+ previous methods in terms of both accuracy and speed.
+ The accuracy advantage stems from the fact that Bipartite Matching takes
+ into account feature position and orientation as well as the description
+ vector at the matching stage.
+ Nearest neighbour and distance threshold methods perform feature matching
+ using only the feature description vector and then as a separate stage
+ remove geometrically inconsistent matches.
+ 
+\end_layout
+
+\begin_layout Standard
+In a situation where the object to be recognized has a regular pattern texture,
+ such as a checkerboard pattern for example, the nearest neighbour method
+ may perform very poorly.
+ This is because the object has many features that have very similar description
+ vectors and when matching scene features to database features either very
+ few features will have a nearest neighbour closer than 80% distance to
+ the second nearest neighbour, or many of the feature matches will be incorrect
+ and removed in the geometric consistency stage.
+ 
+\end_layout
+
+\begin_layout Standard
+The Bipartite Matching method, on the other hand, does not restrict itself
+ to matching only the nearest neighbour features or features under a certain
+ threshold distance.
+ Instead, a holistic approach is used, taking into account multiple properties
+ to determine an appropriate feature match.
+\end_layout
+
+\begin_layout Standard
+The computational complexity of the nearest neighbour method can be a problem,
+ due to the difficulty of nearest neighbour search in a high dimensional
+ space (128 dimensional in the case of SIFT features).
+ Furthermore, the database of features cannot be pruned based on scene knowledge
+ without affecting matching accuracy.
+ This is because we are searching for both a nearest neighbour for a scene
+ feature, as well as its second-nearest neighbour.
+ As a result, the nearest neighbour matching scheme cannot take advantage
+ of scene knowledge which may be available in some situations and applications.
+\end_layout
+
+\begin_layout Standard
+In the case of the presented matching method, the database stores object
+ features grouped into individual views of the object.
+ The advantage of this is that each set of snapshot features is independent.
+ This means that if there is prior knowledge of the objects in the scene,
+ we can focus only on matching the snapshots of the present objects, ignoring
+ the rest.
+ Furthermore if the views for each object are arranged in an aspect graph
+ 
+\begin_inset CommandInset citation
+LatexCommand cite
+key "5_similarity_aspect_graph"
+
+\end_inset
+
+ (a graph in which each node represents a view of the object as seen from
+ some viewpoint), such that it is possible to know if two views of an object
+ are from similar orientations, if we have prior knowledge of the orientation
+ of an object in a scene we can focus our search on the views for that given
+ orientation.
+ For tracking objects in a scene, we could assume that if an object is present
+ in the scene in a frame it will likely be present in the next few frames.
+ Similarly, if an object was in a particular orientation in a frame it will
+ most likely be in a similar orientation in the next few frames.
+ In such a scenario the Bipartite Feature Matching method can exploit the
+ temporal and spacial coherency and be significantly faster than a nearest
+ neighbour feature matching scheme.
+\end_layout
+
+\begin_layout Section
+Future Work
+\begin_inset CommandInset label
+LatexCommand label
+name "sec:Future-Work"
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+In the current approach we assume a rigid affine transform between the learned
+ snapshot of object features and the scene object features.
+ We extract a potential transform from a basis set of feature matches and
+ apply it to the remaining snapshot features.
+ These transformed features are then matched to nearby scene features to
+ construct the complete match.
+ It may be more accurate to model the transformation between snapshot and
+ scene features as a perspective transform.
+ To do this, however, we would need to expand the basis set of feature matches
+ to include four match pairs (the minimum required to fit a perspective
+ transform).
+\end_layout
+
+\begin_layout Standard
+Our algorithm has been developed with SIFT features in mind.
+ However, it should be applicable to other local interest point detectors
+ such as SURF 
+\begin_inset CommandInset citation
+LatexCommand cite
+key "3_Bay_surf"
+
+\end_inset
+
+ and PCA-SIFT 
+\begin_inset CommandInset citation
+LatexCommand cite
+key "3_Yan_pcasift"
+
+\end_inset
+
+.
+ Adapting this matching method to a different type of local image feature
+ should be relatively straight forward.
+ For SIFT-like detectors, it may be as simple as modelling the given feature
+ type's description vector, to convert between a description vector distance
+ between two features to a match probability.
+ 
+\end_layout
+
+\begin_layout Standard
+A further extension of the method is to apply it to 3D stereo images.
+ We have so far dealt with single-camera images but we could extend this
+ algorithm to stereo-camera images.
+ In the case of a stereo-camera we could match corresponding features between
+ the left and right camera image, resulting in stereo SIFT features which
+ have a 3D position determined by the camera parameters.
+ When learning to recognize an object, the features saved in the database
+ would be stereo features which have 3D position information.
+ To recognize and localize an object in a scene we would perform Bipartite
+ Matching between stereo features, with an appropriate modification to position
+ consistency to take into account the 3D as opposed to 2D position of each
+ feature.
+ The advantage of this approach would be a possible improvement in matching
+ accuracy since our position consistency would be based on 3D coordinate
+ data and the 3D localization of the object in the scene is a direct result
+ of the feature matching process.
+ 
+\end_layout
+
+\begin_layout Standard
+Finally, there is significant scope for future work in reducing the reliance
+ on constant parameters and thresholds for our feature matching algorithm.
+ Automatically finding the optimal parameters may result in a higher matching
+ accuracy.
+\end_layout
+
+\end_body
+\end_document

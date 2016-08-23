@@ -1,0 +1,214 @@
+#LyX 2.0 created this file. For more info see http://www.lyx.org/
+\lyxformat 413
+\begin_document
+\begin_header
+\textclass report
+\use_default_options true
+\master ../main.lyx
+\maintain_unincluded_children false
+\language english
+\language_package default
+\inputencoding auto
+\fontencoding global
+\font_roman default
+\font_sans default
+\font_typewriter default
+\font_default_family default
+\use_non_tex_fonts false
+\font_sc false
+\font_osf false
+\font_sf_scale 100
+\font_tt_scale 100
+
+\graphics default
+\default_output_format default
+\output_sync 0
+\bibtex_command default
+\index_command default
+\paperfontsize default
+\spacing single
+\use_hyperref false
+\papersize default
+\use_geometry false
+\use_amsmath 1
+\use_esint 1
+\use_mhchem 1
+\use_mathdots 1
+\cite_engine basic
+\use_bibtopic false
+\use_indices false
+\paperorientation portrait
+\suppress_date false
+\use_refstyle 1
+\index Index
+\shortcut idx
+\color #008000
+\end_index
+\secnumdepth 3
+\tocdepth 3
+\paragraph_separation indent
+\paragraph_indentation default
+\quotes_language english
+\papercolumns 1
+\papersides 1
+\paperpagestyle default
+\tracking_changes false
+\output_changes false
+\html_math_output 0
+\html_css_as_file 0
+\html_be_strict false
+\end_header
+
+\begin_body
+
+\begin_layout Standard
+\begin_inset Newpage cleardoublepage
+\end_inset
+
+
+\end_layout
+
+\begin_layout Chapter
+Conclusion and Future Work
+\end_layout
+
+\begin_layout Standard
+In this thesis we have presented methods for a robot to learn the various
+ object properties required to interact with and use an object effectively.
+ With these methods, the robot is able to learn the object's appearance
+ in a complex environment, reconstruct its shape and use the appearance
+ model to recognise and localise the object in a scene.
+ These skills allow the robot to then manipulate and experiment with the
+ object to determine a predictive model of the properties of the object.
+ The combination of these skills enables the robot to progress from encountering
+ a previously unknown object, to being able to use the object as a tool
+ to accomplish a task.
+\end_layout
+
+\begin_layout Standard
+We have presented a method for effectively segmenting object image features
+ from the background.
+ Long term tracking of object SIFT features, combined with robot induced
+ object motion, enables the robot to use the feature trajectory data to
+ separate the object's features from a cluttered and dynamic background.
+ In this way the robot can autonomously learn an appearance model of a novel
+ object, which can then be used to recognise and localise the object in
+ a scene.
+\end_layout
+
+\begin_layout Standard
+To recognise and localise an object, we have presented a method of matching
+ SIFT features from a learned database of object features to scene features.
+ We use feature geometric properties and feature description vectors concurrentl
+y to perform the match, as opposed to existing methods that perform two
+ separate feature matching stages.
+ By doing this we attain a higher number of feature matches, as compared
+ to nearest neighbour matching, as well as improved efficiency in some circumsta
+nces.
+\end_layout
+
+\begin_layout Standard
+We then combined the object feature segmentation and matching methods with
+ existing 3D reconstruction techniques to build a system for a robot to
+ autonomously learn the full 3D shape and appearance model of the object.
+ This is done by stitching together many separate object views, each of
+ which consisting of the object SIFT features and a dense surface point
+ cloud.
+\end_layout
+
+\begin_layout Standard
+The learned object appearance and shape model allows a robot to effectively
+ recognise and localise the object in a scene from all aspects, as well
+ as to plan grasping and manipulation actions.
+ The robot uses these skills to perform experiments to build a model of
+ the object's physical and internal properties.
+ The robot plans and rehearses actions internally using a simulator and
+ then carries out the most informative experiments on the object.
+ The learned model is then used to plan and complete tool use tasks using
+ the object.
+\end_layout
+
+\begin_layout Subsubsection*
+Future Work
+\end_layout
+
+\begin_layout Standard
+There is a wide scope for future work in the topics covered in this thesis.
+ We have detailed in the individual chapters potential areas for future
+ work directly related to each topic.
+\end_layout
+
+\begin_layout Standard
+The feature matching algorithm can be improved by extending it to other
+ local image feature and interest point detectors (eg: SURF 
+\begin_inset CommandInset citation
+LatexCommand cite
+key "3_Bay_surf"
+
+\end_inset
+
+).
+ Additionally, there is scope for optimising the various parameters and
+ thresholds used in the feature matching process.
+\end_layout
+
+\begin_layout Standard
+The object feature segmentation method can also be extended to other types
+ of features, as well as improving the feature tracking and arm feature
+ filtering methods.
+ For the feature segmentation, we track scene features while moving the
+ target object with the robot arm.
+ We use a lightweight approach for tracking a feature between frames.
+ We can improve this by using a Bayesian tracking method, taking into account
+ feature velocity, position, and description vector to correlate features
+ between frames.
+\end_layout
+
+\begin_layout Standard
+The object shape reconstruction can be improved by incorporating a loop
+ closure technique for stitching together the individual aspects of the
+ object's shape.
+ In addition to this, the directions from which the robot observes the object
+ can be designed to optimise the amount of surface shape information gained.
+\end_layout
+
+\begin_layout Standard
+There are numerous avenues for future work in the area of robot active learning
+ of object properties.
+ First, the discrete and pre-defined object models and available robot actions
+ can be improved to be dynamically generated from the continuous parameter
+ space.
+ The experiment result function approximation, in the form of discrete result
+ labels, can be replaced with a more accurate sample based function approximatio
+n.
+ We can improve the noise model, used in simulation, to take into account
+ non-Gaussian and non-linear sources of experiment uncertainty.
+\end_layout
+
+\begin_layout Standard
+In addition to these areas of possible improvement, other avenues for future
+ work include how a robot can initially detect a new object in a scene,
+ and how the final learned object model can be used for planning of tool-use
+ tasks.
+ In our overall system, we do not address the issue of how the robot can
+ initially detect and grasp a new object in a scene.
+ We assume that the robot starts off with the object in its grasp.
+ There are various possible approaches to this problem, for example the
+ robot can detect areas of irregular displacement on a flat tabletop surface
+ and use this as a hint that it may be an object.
+ Finally, the learned model, encapsulating the physical and internal properties
+ of the object, should be incorporated into a higher level planner, such
+ as STRIPS 
+\begin_inset CommandInset citation
+LatexCommand cite
+key "strips_planner"
+
+\end_inset
+
+.
+ This would allow for effectively planning complex actions, using the object
+ to accomplish a wide variety of tasks.
+\end_layout
+
+\end_body
+\end_document

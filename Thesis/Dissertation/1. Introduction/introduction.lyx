@@ -1,0 +1,733 @@
+#LyX 2.0 created this file. For more info see http://www.lyx.org/
+\lyxformat 413
+\begin_document
+\begin_header
+\textclass report
+\use_default_options true
+\master ../main.lyx
+\maintain_unincluded_children false
+\language english
+\language_package default
+\inputencoding auto
+\fontencoding global
+\font_roman default
+\font_sans default
+\font_typewriter default
+\font_default_family default
+\use_non_tex_fonts false
+\font_sc false
+\font_osf false
+\font_sf_scale 100
+\font_tt_scale 100
+
+\graphics default
+\default_output_format default
+\output_sync 0
+\bibtex_command default
+\index_command default
+\paperfontsize default
+\spacing single
+\use_hyperref false
+\papersize default
+\use_geometry false
+\use_amsmath 1
+\use_esint 1
+\use_mhchem 1
+\use_mathdots 1
+\cite_engine basic
+\use_bibtopic false
+\use_indices false
+\paperorientation portrait
+\suppress_date false
+\use_refstyle 1
+\index Index
+\shortcut idx
+\color #008000
+\end_index
+\secnumdepth 3
+\tocdepth 3
+\paragraph_separation indent
+\paragraph_indentation default
+\quotes_language english
+\papercolumns 1
+\papersides 1
+\paperpagestyle default
+\tracking_changes false
+\output_changes false
+\html_math_output 0
+\html_css_as_file 0
+\html_be_strict false
+\end_header
+
+\begin_body
+
+\begin_layout Standard
+\begin_inset Newpage cleardoublepage
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+\begin_inset ERT
+status open
+
+\begin_layout Plain Layout
+
+
+\backslash
+pagenumbering{arabic}
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+\begin_inset ERT
+status open
+
+\begin_layout Plain Layout
+
+ 
+\backslash
+setcounter{page}{1}
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Chapter
+Introduction
+\end_layout
+
+\begin_layout Standard
+This thesis deals with the steps required for an autonomous robot to progress
+ from encountering a new object in the environment to being able to recognise,
+ manipulate, and finally use the object to complete a task.
+ This thesis encompasses several fields ranging from computer vision, object
+ recognition and reconstruction, to simulation and planning.
+ We focus on maximising robot autonomy by developing methods that allow
+ a robot to be self-sufficient in tasks that would otherwise require human
+ operator intervention or the availability of pre-processed data.
+\end_layout
+
+\begin_layout Standard
+The principal aim of this thesis is to investigate a method for a robot
+ to autonomously learn an object's properties by interacting with the object
+ and observing the outcome of these interactions.
+ However, there are several perception problems that need to be solved before
+ a robot can effectively interact with an object.
+ We address these first, followed by presenting the main contribution of
+ active robot learning of object properties.
+\end_layout
+
+\begin_layout Standard
+The initial step is to develop a vision system capable of learning to recognise
+ a new object in a complex environment with no human intervention or pre-process
+ed training data.
+ This consists of two separate tasks.
+ The first is to learn the object's appearance by separating its image features
+ from the background.
+ This is challenging as the robot has no 
+\emph on
+a priori
+\emph default
+ knowledge of the object and segmentation may be complicated by a cluttered
+ and dynamic scene background.
+ The second is to effectively match the learned object's appearance to a
+ model, so that the robot can recognise and localise the object in the scene.
+\end_layout
+
+\begin_layout Standard
+The next step is to learn the object's 3D shape and the full 
+\begin_inset Formula $360\textdegree$
+\end_inset
+
+ appearance model.
+ This allows the robot to recognise an object in a scene from any angle
+ and to determine its pose.
+ Knowing the shape of the object enables a robot to plan grasp and manipulation
+ actions.
+ The robot learns the full 3D model of the object by combining views of
+ the object from different directions.
+\end_layout
+
+\begin_layout Standard
+The final step is for the robot to learn the physical and internal properties
+ of an object through experimentation and interaction.
+ Some properties of an object cannot be determined by passive observation
+ (eg: centre of mass, coefficient of friction, etc).
+ To do this, the robot must actively interact with the object, performing
+ experiments and observing the results.
+ By doing this, it can build a model of the internal properties of the object.
+ The challenges include choosing an appropriate representation to model
+ the properties of the object, performing the experiments that provide the
+ most information about the object, and correctly inferring the object's
+ properties from the outcomes of the experiments.
+ By doing this, the robot can efficiently build an accurate model of the
+ object, taking into account its shape, appearance, internal and physical
+ properties.
+ This allows the robot to effectively manipulate and use the object to accomplis
+h tasks.
+\end_layout
+
+\begin_layout Standard
+The end result is a robot system that can autonomously progress from a first
+ encounter with an object to effectively using the object as a tool.
+\end_layout
+
+\begin_layout Section
+Motivation
+\end_layout
+
+\begin_layout Standard
+One of the first widespread applications of robots was in factories to automate
+ assembly and construction 
+\begin_inset CommandInset citation
+LatexCommand cite
+key "1_assembly_robot"
+
+\end_inset
+
+.
+ In these cases the robots operated in structured environments and performed
+ structured tasks.
+ Over time robots became mobile, gained a degree of autonomy, and were being
+ used in less structured environments 
+\begin_inset CommandInset citation
+LatexCommand cite
+key "1_domestic_service_robots"
+
+\end_inset
+
+.
+ Extrapolating this trend leads to many new potential application areas,
+ for example household service robots (example in Figure 
+\begin_inset CommandInset ref
+LatexCommand ref
+reference "fig:A-Willow-Garage"
+
+\end_inset
+
+).
+ These are robots which could be used to perform tasks around the house
+ and provide assistance for the elderly and disabled.
+ One of the main challenges 
+\begin_inset CommandInset citation
+LatexCommand cite
+key "robot_challenges"
+
+\end_inset
+
+ to applying robotics to these applications is autonomy and self-sufficiency.
+\end_layout
+
+\begin_layout Standard
+\begin_inset Float figure
+wide false
+sideways false
+status open
+
+\begin_layout Plain Layout
+\align center
+\begin_inset Graphics
+	filename images/pr2_robot1.png
+	scale 50
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Plain Layout
+\begin_inset Caption
+
+\begin_layout Plain Layout
+\begin_inset Argument
+status open
+
+\begin_layout Plain Layout
+Willow Garage household service robot.
+\end_layout
+
+\end_inset
+
+A Willow Garage PR2 Robot performing a household task.
+ 
+\family typewriter
+\size small
+(Image courtesy of 
+\family default
+
+\begin_inset Quotes eld
+\end_inset
+
+A fresh view on the Internet and Society
+\begin_inset Quotes erd
+\end_inset
+
+ 
+\family typewriter
+\size footnotesize
+http://cs47n.blogspot.com.au/2011/10/article-on-willow-garage-where-well.html
+\family default
+\size small
+)
+\size default
+
+\begin_inset CommandInset label
+LatexCommand label
+name "fig:A-Willow-Garage"
+
+\end_inset
+
+
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+Consider the following example scenario: a household service robot is deployed
+ into an elderly person's home.
+ A typical tasks that it may need to perform is retrieving medicine.
+ This seemingly simple task involves several steps that are complicated
+ by the need for autonomy and to operate in a complex, human-centric environment.
+ 
+\end_layout
+
+\begin_layout Standard
+First, the robot must be able to recognise and locate the correct medicine
+ container in the house.
+ There are many different approaches to object perception using robot sensors
+ (discussed in detail in Chapter 2), however many of them rely on the robot
+ having 
+\emph on
+a priori
+\emph default
+ knowledge of the target object.
+ For example, this knowledge can be in the form of segmented views of the
+ object.
+ The problem with this is that an autonomous robot, operating in a complex
+ environment, may encounter an endless array of objects.
+ It is not feasible to provide the robot, prior to deployment, with a model
+ of every possible object it may need to recognise.
+ Instead, the robot must be able to autonomously learn the appearance of
+ new objects.
+ In the case of a household service robot, it would learn the appearance
+ of various objects around the house after it has been deployed.
+ In this way the robot would no longer be reliant on pre-programmed classifiers,
+ but would be able to dynamically learn to recognise and localise novel
+ objects.
+ A related task is reconstructing the 3D shape of an object.
+ Knowing the shape of an object allows a robot to more effectively interact
+ with it, being able to choose optimal grasp points 
+\begin_inset CommandInset citation
+LatexCommand cite
+key "5_grasp_planning2"
+
+\end_inset
+
+, as well as allowing the robot to perform motion planning and reason about
+ the potential tool uses of the object 
+\begin_inset CommandInset citation
+LatexCommand cite
+key "6_solly"
+
+\end_inset
+
+.
+ Similar to learning the object's appearance, a robot should be able to
+ learn the 3D shape of an object autonomously.
+\end_layout
+
+\begin_layout Standard
+Consider a different scenario in which a household service robot needs to
+ prop open a door with some object.
+ In this case the properties of the object will determine if it is a suitable
+ tool to use for this task.
+ For example, a light or slippery object may not be suitable, whereas a
+ heavy and rough object would be.
+ Similar to the problem of object recognition, it is not feasible to pre-program
+ a robot with knowledge of the physical properties of every object it may
+ encounter in an unstructured environment such as a home.
+ Instead the robot must be able to autonomously discover object properties
+ such as weight, centre of mass, coefficient of friction, etc.
+ To do this it may need to perform experiments to build a model of the object.
+\end_layout
+
+\begin_layout Standard
+Many of the problems this dissertation addresses are based on minimising
+ the role of human intervention and pre-programmed knowledge, instead maximising
+ robot autonomy.
+ The aim is a level of autonomy that would allow a robot to be deployed
+ in an unknown and unstructured environment, and to be able to discover
+ new objects and use these as tools to solve some tasks.
+\end_layout
+
+\begin_layout Section
+Contributions
+\end_layout
+
+\begin_layout Standard
+The main achievements presented in this theses are:
+\end_layout
+
+\begin_layout Itemize
+A novel method for a robot to learn the physical properties of an object
+ by active experimentation.
+ We use a physics simulator to generate hypotheses and guide the robot toward
+ the experiments with the highest information gain.
+ We solve the problem of choosing the optimal experiment by internally rehearsin
+g each experiment in simulation to determine the posterior probability and
+ the associated expected entropy.
+ The optimal experiment is then carried out by the robot on the object,
+ and the results provide information about the internal and physical properties
+ of the object.
+\end_layout
+
+\begin_layout Itemize
+The learned model, incorporating the appearance, shape and the physical
+ properties of the object, is used to plan and execute a tool-use task.
+ The task is planned using internal rehearsal in simulation, and then carried
+ out by the robot.
+\end_layout
+
+\begin_layout Itemize
+A new method for local image feature matching, correlating scene image features
+ to a database of learned object image features for object recognition and
+ localisation.
+ The developed algorithm is more accurate than the approximate nearest-neighbour
+ method 
+\begin_inset CommandInset citation
+LatexCommand cite
+key "3_Lowe_approxnn"
+
+\end_inset
+
+, as well as computationally more efficient in certain circumstances.
+ This enables a robot to recognise and localise objects in a scene with
+ greater accuracy and speed.
+\end_layout
+
+\begin_layout Itemize
+A method for a robot to learn to recognise a previously unseen object by
+ using motion and long term feature tracking to segment object features
+ from the background, generating a database of object image features in
+ the process.
+ We solve the problem of generating segmented snapshots of the target object
+ in the presence of a high degree of background clutter and motion.
+ Object snapshots are combined to learn the full 3D aspect graph and shape
+ of the object by stitching together multiple object views.
+\end_layout
+
+\begin_layout Standard
+The result of this thesis is a robot system with the ability to encounter
+ an unknown object, learn to recognise the object, determine its 3D shape,
+ its physical properties, and use the object to complete a task requiring
+ tool use.
+\end_layout
+
+\begin_layout Section
+Robot Platform
+\begin_inset CommandInset label
+LatexCommand label
+name "sec:Robot-Platform"
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+\begin_inset Float figure
+wide false
+sideways false
+status open
+
+\begin_layout Plain Layout
+\align center
+\begin_inset Graphics
+	filename images/robot.png
+	width 50text%
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Plain Layout
+\begin_inset Caption
+
+\begin_layout Plain Layout
+\begin_inset Argument
+status open
+
+\begin_layout Plain Layout
+Robot platform.
+\end_layout
+
+\end_inset
+
+The robot platform used for this thesis.
+ The robot is composed of a six degrees-of-freedom industrial arm, a two
+ fingered gripper, and a camera mounted on a pan-tilt unit.
+ A tablet-top workspace is accessible in front of the robot.
+\begin_inset CommandInset label
+LatexCommand label
+name "fig:The-robot-platform"
+
+\end_inset
+
+
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+The platform used to test and evaluate the methods and algorithms presented
+ here consists of a camera on a pan-tilt unit and a six degrees of freedom
+ robot arm with a gripper attachment.
+ This is arranged in a humanoid configuration, the pan-tilt unit and camera
+ are placed on top of a metal spine and the arm is attached below (see Figure
+ 
+\begin_inset CommandInset ref
+LatexCommand ref
+reference "fig:The-robot-platform"
+
+\end_inset
+
+).
+ The spine is fixed to a table, which provides the robot with a flat workspace
+ in front.
+ The camera unit is located 
+\begin_inset Formula $0.8$
+\end_inset
+
+ metres above the workspace surface, while the arm is fixed to a point 
+\begin_inset Formula $0.5$
+\end_inset
+
+ metres above the surface.
+ 
+\end_layout
+
+\begin_layout Standard
+The camera unit is a Point Grey Bumblebee2 stereo camera
+\begin_inset Foot
+status open
+
+\begin_layout Plain Layout
+http://www.ptgrey.com/products/bumblebee2/
+\end_layout
+
+\end_inset
+
+, which incorporates two RGB cameras with 
+\begin_inset Formula $43\textdegree$
+\end_inset
+
+ field of view and a 
+\begin_inset Formula $12cm$
+\end_inset
+
+ baseline distance.
+ We used a resolution of 
+\begin_inset Formula $640\times480$
+\end_inset
+
+ at a refresh rate of 
+\begin_inset Formula $10$
+\end_inset
+
+ frames per second.
+ For some experiments this camera is replaced with a Microsoft Kinect
+\begin_inset Foot
+status open
+
+\begin_layout Plain Layout
+http://www.xbox.com/en-US/kinect
+\end_layout
+
+\end_inset
+
+ RGB-D camera.
+ The Kinect is a sensor unit combining a traditional RGB camera with an
+ infrared camera and projector which, using structured light, is able to
+ provide 
+\begin_inset Formula $1$
+\end_inset
+
+1 bits of depth information per pixel.
+ The result is a 
+\begin_inset Formula $640\times480$
+\end_inset
+
+ resolution image, with each pixel containing RGB color information as well
+ as a depth value.
+ The Kinect is described in greater detail in Chapter 6.
+\end_layout
+
+\begin_layout Standard
+The robot arm is a Denso Robotics VP-6
+\begin_inset Foot
+status open
+
+\begin_layout Plain Layout
+http://www.densorobotics.com/products_vp_5_6axis.php
+\end_layout
+
+\end_inset
+
+ robot, which is able to orient the end-point with six degrees of freedom
+ and is composed of six joints.
+ At the end of the robot arm we attached a two fingered gripper (see Figure
+ 
+\begin_inset CommandInset ref
+LatexCommand ref
+reference "fig:The-robot-gripper"
+
+\end_inset
+
+).
+ Each finger consists of two servos with a silicone coated pad at the tip
+ for improved grip.
+\end_layout
+
+\begin_layout Standard
+\begin_inset Float figure
+wide false
+sideways false
+status open
+
+\begin_layout Plain Layout
+\align center
+\begin_inset Graphics
+	filename images/gripper.png
+	width 60text%
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Plain Layout
+\begin_inset Caption
+
+\begin_layout Plain Layout
+\begin_inset Argument
+status open
+
+\begin_layout Plain Layout
+Robot gripper configuration.
+\end_layout
+
+\end_inset
+
+The two-fingered gripper attachment on the end of the robot arm.
+ Each finger is composed of two servos, the finger tips consist of metal
+ plates covered in silicone to increase friction.
+\begin_inset CommandInset label
+LatexCommand label
+name "fig:The-robot-gripper"
+
+\end_inset
+
+
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Section
+Thesis Outline
+\end_layout
+
+\begin_layout Itemize
+
+\series bold
+Chapter 2
+\series default
+ provides an overview of the related work in the fields of computer vision,
+ 3D reconstruction and active robot learning.
+\end_layout
+
+\begin_layout Itemize
+
+\series bold
+Chapter 3
+\series default
+ describes a new method of image feature matching for object recognition,
+ improving upon existing methods in both speed and accuracy.
+\end_layout
+
+\begin_layout Itemize
+
+\series bold
+Chapter 4
+\series default
+ describes a method for a robot to learn the appearance of a new object
+ autonomously and in a complex environment.
+ This allows the robot to learn to recognise objects after it has been deployed,
+ rather than being limited to those objects it has been trained to recognise
+ during development.
+\end_layout
+
+\begin_layout Itemize
+
+\series bold
+Chapter 5
+\series default
+ combines the methods developed in Chapters 3 and 4 with 3D reconstruction
+ techniques into a system allowing a robot to learn the full 3D aspect graph
+ of an object as well as its shape.
+\end_layout
+
+\begin_layout Itemize
+
+\series bold
+Chapter 6
+\series default
+ presents the primary contribution of this thesis, a technique for a robot
+ to learn the physical and internal properties of an object using interaction
+ and experimentation.
+ The learned object model is then used for planning and carrying out a tool-use
+ task.
+\end_layout
+
+\begin_layout Itemize
+
+\series bold
+Chapter 7
+\series default
+ suggests avenues for future work as well as concluding the thesis.
+\end_layout
+
+\end_body
+\end_document

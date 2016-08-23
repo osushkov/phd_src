@@ -1,0 +1,85 @@
+import sys
+import os
+
+### Stuff you might want to change ###
+
+LIBRARY_SOURCES = [
+    'src/Timer.cpp',
+    'src/RemoteCamera.cpp',
+    'src/PlaybackCamera.cpp',
+    'src/TemporalDisparity.cpp',
+    'src/StereoFeatureCorrelation.cpp',
+    'src/TraceTracker.cpp',
+    'src/FrameHistoryBuffer.cpp',
+    'src/FeatureMemory.cpp',
+    'src/SIFTGenerator.cpp',
+    'src/DepthFeaturePublisher.cpp',
+    'src/SpacioTemporalLocality.cpp',
+    'src/Util/Common.cpp',
+    'src/Util/Semaphore.cpp',
+    'src/Util/ReadWriteLock.cpp',
+    'src/Util/ParallelServer.cpp',
+    'src/SIFT/imgfeatures.cpp',
+    'src/SIFT/utils.cpp',
+    'src/SIFT/sift.cpp',
+    'src/OptimiserClass/NelderMead.cpp',
+    'src/OptimiserClass/ParticleSwarm.cpp',
+    'src/OptimiserClass/SimulatedAnnealing.cpp',
+    'src/OptimiserClass/GeneticAlgorithm.cpp',
+]
+
+BINARY_SOURCES = ['src/main.cpp']
+
+DIST_SOURCES = LIBRARY_SOURCES + [
+    'src/Timer.h',
+    'src/Camera.h',
+    'src/RemoteCamera.h',
+    'src/PlaybackCamera.h',
+    'src/TemporalDisparity.h',
+    'src/StereoFeatureCorrelation.h',
+    'src/TraceTracker.h',
+    'src/FrameHistoryBuffer.h',
+    'src/FeatureMemory.h',
+    'src/SIFTGenerator.h',
+    'src/DepthFeaturePublisher.h',
+    'src/SpacioTemporalLocality.h',
+    'src/Util/Common.h',
+    'src/Util/Semaphore.h',
+    'src/Util/ReadWriteLock.h',
+    'src/Util/ParallelServer.h',
+    'src/SIFT/imgfeatures.h',
+    'src/SIFT/utils.h',
+    'src/SIFT/sift.h',
+    'src/OptimiserClass/Common.h',
+    'src/OptimiserClass/Optimiser.h',
+    'src/OptimiserClass/NelderMead.h',
+    'src/OptimiserClass/ParticleSwarm.h',
+    'src/OptimiserClass/SimulatedAnnealing.h',
+    'src/OptimiserClass/GeneticAlgorithm.h',
+]
+
+LIBS = ['cv', 'highgui', 'boost_thread-mt', 'pthread', 'ANN']
+
+release_flags = '-Wall -D_REENTRANT -O3'
+debug_flags = '-Wall -D_REENTRANT -g -DDEBUG'
+
+### Stuff you probably don't need to change ###
+
+env = Environment()
+
+mode = ARGUMENTS.get('mode', 'debug')
+if mode == 'debug':
+    env.Append(CXXFLAGS = debug_flags)
+elif mode == 'release':
+    env.Append(CXXFLAGS = release_flags)
+else:
+    print "Unknown mode '%s%', use debug (default) or release" % mode
+    sys.exit(1)
+
+### compilation rules
+library_objects = [ env.Object(s, CXX = 'g++') for s in LIBRARY_SOURCES]
+binary_objects = [ env.Object(s, CXX = 'g++') for s in BINARY_SOURCES]
+
+manipulatordetect = env.Program('manipulatordetect', library_objects + binary_objects,
+                        CXX = 'g++', LIBS = LIBS)
+
